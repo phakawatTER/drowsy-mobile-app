@@ -1,6 +1,7 @@
 import React from "react";
 import { Easing, Animated } from "react-native";
 import {
+  createSwitchNavigator,
   createStackNavigator,
   createDrawerNavigator,
   createAppContainer
@@ -95,7 +96,7 @@ const ProfileStack = createStackNavigator(
       screen: Profile,
       navigationOptions: ({ navigation }) => ({
         header: (
-          <Header white transparent title="Profile" iconColor={'#FFF'} navigation={navigation} />
+          <Header  transparent title="Profile" navigation={navigation} />
         ),
         headerTransparent: true
       })
@@ -108,22 +109,6 @@ const ProfileStack = createStackNavigator(
 );
 
 const HomeStack = createStackNavigator({
-  Login: {
-    screen: Login,
-    navigationOptions: navOpt => ({
-      drawerLabel: ({ focused }) => (
-        <DrawerItem focused={focused} screen="Login" title="Sign in" />
-      )
-    })
-  },
-  Register: {
-    screen: Register,
-    navigationOptions: navOpt => ({
-      drawerLabel: ({ focused }) => (
-        <DrawerItem focused={focused} screen="Register" title="Sign up" />
-      )
-    })
-  },
   Home: {
     screen: Home,
     navigationOptions: ({ navigation }) => ({
@@ -148,9 +133,51 @@ const HomeStack = createStackNavigator({
   }
 );
 
-// divideru se baga ca si cum ar fi un ecrna dar nu-i nimic duh
+// Route for authentication step
+const LoginScreen = createStackNavigator({
+  Login: {
+    screen: Login,
+    navigationOptions: navOpt => ({
+      drawerLabel: ({ focused }) => (
+        <DrawerItem focused={focused} screen="Login" title="Sign in" />
+      )
+    })
+  },
+
+})
+
+const RegisterScreen = createStackNavigator({
+  Register: {
+    screen: Register,
+    navigationOptions: navOpt => ({
+      drawerLabel: ({ focused }) => (
+        <DrawerItem focused={focused} screen="Register" title="Sign up" />
+      )
+    })
+  },
+})
+
+// console.log(AuthStack)
 const AppStack = createDrawerNavigator(
   {
+    Login: {
+      screen: LoginScreen,
+      navigationOptions: navOpt => ({
+        drawerLabel: ({ focused }) => (
+          <DrawerItem focused={focused} screen="Login" title="Sign in" />
+        )
+      })
+    },
+    Register: {
+      screen: RegisterScreen,
+      navigationOptions: navOpt => ({
+        drawerLabel: ({ focused }) => (
+          <DrawerItem focused={focused} screen="Register" title="Sign up" />
+        )
+      })
+    },
+
+    // Register
     Home: {
       screen: HomeStack,
       navigationOptions: navOpt => ({
@@ -168,30 +195,23 @@ const AppStack = createDrawerNavigator(
       })
     },
 
-    Elements: {
-      screen: ElementsStack,
-      navigationOptions: navOpt => ({
-        drawerLabel: ({ focused }) => (
-          <DrawerItem focused={focused} screen="Elements" title="Elements" />
-        )
-      })
-    },
-    Articles: {
-      screen: ArticlesStack,
-      navigationOptions: navOpt => ({
-        drawerLabel: ({ focused }) => (
-          <DrawerItem focused={focused} screen="Articles" title="Articles" />
-        )
-      })
-    },
-    Articles: {
-      screen: ArticlesStack,
-      navigationOptions: navOpt => ({
-        drawerLabel: ({ focused }) => (
-          <DrawerItem focused={focused} screen="Logout" title="Log out" />
-        )
-      })
-    },
+    // Elements: {
+    //   screen: ElementsStack,
+    //   navigationOptions: navOpt => ({
+    //     drawerLabel: ({ focused }) => (
+    //       <DrawerItem focused={focused} screen="Elements" title="Elements" />
+    //     )
+    //   })
+    // },
+    // Articles: {
+    //   screen: ArticlesStack,
+    //   navigationOptions: navOpt => ({
+    //     drawerLabel: ({ focused }) => (
+    //       <DrawerItem focused={focused} screen="Articles" title="Articles" />
+    //     )
+    //   })
+    // },
+    
   },
   Menu
 );

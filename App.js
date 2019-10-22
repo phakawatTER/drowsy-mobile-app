@@ -7,6 +7,7 @@ import firebase from "firebase"
 import Screens from './navigation/Screens';
 import { Images, articles, argonTheme } from './constants';
 import { config } from "./firebase-config"
+import { AsyncStorage } from "react-native"
 // cache app images
 const assetImages = [
   Images.Onboarding,
@@ -32,28 +33,51 @@ function cacheImages(images) {
 }
 
 export default class App extends React.Component {
-  constructor() {
-    super()
+  constructor(props) {
+    super(props)
     this.state = {
-
+      userInfo: null
     }
     this.setUserInfo = this.setUserInfo.bind(this)
     this.getUserInfo = this.getUserInfo.bind(this)
+    this.screenRef = React.createRef()
     try {
       firebase.initializeApp(config)
-    } catch (err) { console.log(err) }
-    firebase.database().ref().child("notification").child("-LrdlygY0H5IzMvDo-bh").on("child_added", (snapshot) => {
-
-      console.log(this.state.userInfo)
-      console.log(snapshot.val())
-    })
+    } catch (err) {
+      console.log(err)
+    }
   }
 
   loadUserInfo = async () => {
     let userInfo = await AsyncStorage.getItem("userInfo")
     userInfo = JSON.parse(userInfo)
     this.setState({ userInfo: userInfo }, () => {
-      console.log("LOADNAJA", this.state)
+      if (userInfo) {
+        let { uid } = userInfo
+        let loginRef = firebase.database().ref()
+          .child("login").child(uid).child("app").orderByKey().limitToLast(1)
+        // TO DETECT DUBPLICATE LOGIN
+        // APP USER ARE NOT ALLOWED TO LOGGED IN DUBPLICATEDLY
+        loginRef.on("child_added", (snapshot) => {
+          AsyncStorage.getItem("userInfo").then(_userInfo => {
+            _userInfo = JSON.parse(_userInfo)
+            let { token } = _userInfo
+            let loginInfo = snapshot.val()
+            let latestToken = loginInfo.token
+            if (token !== latestToken) {
+              AsyncStorage.removeItem("userInfo").then(data => {
+                alert("Someone has logged in into your account. Your token has been expired!")
+                this.screenRef.current._navigation.navigate("Login")
+              }).catch(err => {
+                console.log(err)
+              })
+            }
+          }).catch(err => {
+            console.log(err)
+          })
+
+        })
+      }
     })
   }
   componentWillMount() {
@@ -85,6 +109,7 @@ export default class App extends React.Component {
         <GalioProvider theme={argonTheme}>
           <Block flex>
             <Screens
+              ref={this.screenRef}
               screenProps={{
                 setUserInfo: this.setUserInfo,
                 getUserInfo: this.getUserInfo

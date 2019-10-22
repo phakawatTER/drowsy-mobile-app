@@ -1,5 +1,4 @@
 import React from "react";
-import { AsyncStorage } from "react-native"
 import {
     StyleSheet,
     ImageBackground,
@@ -12,7 +11,7 @@ import axios from "axios";
 import { Button, Icon, Input } from "../components";
 import { Images, argonTheme } from "../constants";
 import { API_LOGIN } from "../link"
-
+import { AsyncStorage } from "react-native"
 const { width, height } = Dimensions.get("screen");
 
 class Login extends React.Component {
@@ -24,6 +23,17 @@ class Login extends React.Component {
             passwordState: "",
             emailState: "",
         }
+    }
+
+    getUserInfo = async () => {
+        let userInfo = await AsyncStorage.getItem("userInfo")
+        userInfo = JSON.parse(userInfo)
+        if (userInfo) this.props.navigation.navigate("Profile")
+
+    }
+
+    componentWillMount() {
+        this.getUserInfo()
     }
 
     storeUserInfo = async (storedData) => {
@@ -50,7 +60,7 @@ class Login extends React.Component {
                 if (response.status == 200) {
                     let data = response.data
                     let { code } = data
-                    console.log("FUCK",data.userInfo)
+                    console.log("FUCK", data.userInfo)
                     if (code === 200) {
                         this.storeUserInfo(JSON.stringify(data.userInfo))
                         this.props.screenProps.setUserInfo(data.userInfo)

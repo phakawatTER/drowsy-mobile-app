@@ -1,11 +1,12 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   Dimensions,
   ScrollView,
   Image,
   ImageBackground,
-  Platform
+  Platform,
+  Animated
 } from "react-native";
 import { Block, Text, theme } from "galio-framework";
 
@@ -13,6 +14,11 @@ import { Button } from "../components";
 import { Images, argonTheme } from "../constants";
 import { HeaderHeight } from "../constants/utils";
 import { AsyncStorage } from "react-native";
+import { API_GET_NOTIFICATION_RECORD } from "../link"
+import axios from "axios"
+import moment from "moment"
+import firebase from "firebase"
+import { config } from "../firebase-config"
 const { width, height } = Dimensions.get("screen");
 
 const thumbMeasure = (width - 48 - 32) / 3;
@@ -22,32 +28,85 @@ class Profile extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
+      notificationRecs: [],
+      isLoading: true,
       userInfo: {
         fname: "",
         lname: "",
         email: ""
       }
     }
+    try {
+      firebase.initializeApp(config)
+    } catch (err) { }
+
   }
   loadUserInfo = async () => {
     let userInfo = await AsyncStorage.getItem("userInfo")
     userInfo = JSON.parse(userInfo)
     this.setState({ userInfo: userInfo }, () => {
-      console.log(this.state)
     })
   }
 
+  getNotificationRecord = () => {
+    this.setState({ isLoading: true })
+    AsyncStorage.getItem("userInfo").then(userInfo => {
+      let { token, uid, from } = JSON.parse(userInfo)
+
+      let payload = {
+        user_id: uid,
+        from: from
+      }
+      axios
+        .create({
+          headers: { "Content-Type": "application/json", token: token }
+        })
+        .post(API_GET_NOTIFICATION_RECORD, payload)
+        .then(response => {
+          let { code, result } = response.data
+          if (code === 200) {
+            this.setState({
+              notificationRecs: result,
+              isLoading: false
+            }, () => {
+              // reference to user collection
+              let notificationRef = firebase
+                .database().ref()
+                .child("notification").child(uid).limitToLast(1)
+              // child added listener
+              notificationRef.on("child_added", (snapshot) => {
+                let found = this.state.notificationRecs.find(obj => {
+                  return obj.timestamp === snapshot.val().timestamp
+                })
+                if (!found) {
+                  this.state.notificationRecs = [snapshot.val(), ... this.state.notificationRecs]
+                  this.setState({ notificationRecs: this.state.notificationRecs })
+                }
+              })
+            })
+          }
+        }).catch(err => {
+          console.log(err)
+        })
+    }).catch(err => {
+      console.log(err)
+    })
+  }
+
+
   componentWillMount() {
+    // console.log(this.props.navigation)
     this.loadUserInfo()
+    this.getNotificationRecord()
   }
 
   render() {
-    const { fname, lname, email } = this.state.userInfo
+    const { fname, lname, profile } = this.state.userInfo
     return (
       <Block flex style={styles.profile}>
         <Block flex>
           <ImageBackground
-            source={Images.ProfileBackground}
+            // source={Images.ProfileBackground}
             style={styles.profileContainer}
             imageStyle={styles.profileBackground}
           >
@@ -58,7 +117,7 @@ class Profile extends React.Component {
               <Block flex style={styles.profileCard}>
                 <Block middle style={styles.avatarContainer}>
                   <Image
-                    source={{ uri: Images.ProfilePicture }}
+                    source={{ uri: profile ? null : Images.ProfilePicture }}
                     style={styles.avatar}
                   />
                 </Block>
@@ -82,227 +141,49 @@ class Profile extends React.Component {
                       MESSAGE
                     </Button>
                   </Block>
-                  <Block row space="between">
-                    <Block middle>
-                      <Text
-                        bold
-                        size={12}
-                        color="#525F7F"
-                        style={{ marginBottom: 4 }}
-                      >
-                        2K
-                      </Text>
-                      <Text size={12}>Orders</Text>
-                    </Block>
-                    <Block middle>
-                      <Text
-                        bold
-                        color="#525F7F"
-                        size={12}
-                        style={{ marginBottom: 4 }}
-                      >
-                        10
-                      </Text>
-                      <Text size={12}>Photos</Text>
-                    </Block>
-                    <Block middle>
-                      <Text
-                        bold
-                        color="#525F7F"
-                        size={12}
-                        style={{ marginBottom: 4 }}
-                      >
-                        89
-                      </Text>
-                      <Text size={12}>Comments</Text>
-                    </Block>
-                  </Block>
                 </Block>
                 <Block flex>
                   <Block middle style={styles.nameInfo}>
                     <Text bold size={28} color="#32325D">
                       {fname} {lname}
                     </Text>
-                    <Text size={16} color="#32325D" style={{ marginTop: 10 }}>
+                    {/* <Text size={16} color="#32325D" style={{ marginTop: 10 }}>
                       San Francisco, USA
-                    </Text>
+                    </Text> */}
                   </Block>
                   <Block middle style={{ marginTop: 30, marginBottom: 16 }}>
                     <Block style={styles.divider} />
                   </Block>
-                  <Block middle>
-                    <Text
-                      size={16}
-                      color="#525F7F"
-                      style={{ textAlign: "center" }}
-                    >
-                      An artist of considerable range, Jessica name taken by
-                      Melbourne …
+
+                  <Block>
+                    <Text bold size={28} color="#32325D">
+                      Drowsy Records
                     </Text>
-                    <Button
-                      color="transparent"
-                      textStyle={{
-                        color: "#233DD2",
-                        fontWeight: "500",
-                        fontSize: 16
-                      }}
-                    >
-                      Show more
-                    </Button>
-                  </Block>
-                  <Block
-                    row
-                    style={{ paddingVertical: 14, alignItems: "baseline" }}
-                  >
-                    <Text bold size={16} color="#525F7F">
-                      Album
+                    <Text bold size={20}>
+                      {this.state.notificationRecs.length} record(s)
                     </Text>
-                  </Block>
-                  <Block
-                    row
-                    style={{ paddingBottom: 20, justifyContent: "flex-end" }}
-                  >
-                    <Button
-                      small
-                      color="transparent"
-                      textStyle={{ color: "#5E72E4", fontSize: 12 }}
-                    >
-                      View all
-                    </Button>
-                  </Block>
-                  <Block style={{ paddingBottom: -HeaderHeight * 2 }}>
-                    <Block row space="between" style={{ flexWrap: "wrap" }}>
-                      {Images.Viewed.map((img, imgIndex) => (
-                        <Image
-                          source={{ uri: img }}
-                          key={`viewed-${img}`}
-                          resizeMode="cover"
-                          style={styles.thumb}
-                        />
-                      ))}
-                    </Block>
+                    {
+                      !this.state.isLoading ?
+                        this.state.notificationRecs.map((record, index) => {
+                          let { timestamp } = record
+                          timestamp = moment(timestamp).format('dddd MMMM DD YYYY, h:mm:ss a')
+                          return (
+                            <Block key={index} middle size={17}>
+                              <Text>
+                                {timestamp}
+                              </Text>
+                            </Block>
+                          )
+                        })
+                        : null
+                    }
+
                   </Block>
                 </Block>
               </Block>
             </ScrollView>
           </ImageBackground>
         </Block>
-        {/* <ScrollView showsVerticalScrollIndicator={false} 
-                    contentContainerStyle={{ flex: 1, width, height, zIndex: 9000, backgroundColor: 'red' }}>
-        <Block flex style={styles.profileCard}>
-          <Block middle style={styles.avatarContainer}>
-            <Image
-              source={{ uri: Images.ProfilePicture }}
-              style={styles.avatar}
-            />
-          </Block>
-          <Block style={styles.info}>
-            <Block
-              middle
-              row
-              space="evenly"
-              style={{ marginTop: 20, paddingBottom: 24 }}
-            >
-              <Button small style={{ backgroundColor: argonTheme.COLORS.INFO }}>
-                CONNECT
-              </Button>
-              <Button
-                small
-                style={{ backgroundColor: argonTheme.COLORS.DEFAULT }}
-              >
-                MESSAGE
-              </Button>
-            </Block>
-
-            <Block row space="between">
-              <Block middle>
-                <Text
-                  bold
-                  size={12}
-                  color="#525F7F"
-                  style={{ marginBottom: 4 }}
-                >
-                  2K
-                </Text>
-                <Text size={12}>Orders</Text>
-              </Block>
-              <Block middle>
-                <Text bold size={12} style={{ marginBottom: 4 }}>
-                  10
-                </Text>
-                <Text size={12}>Photos</Text>
-              </Block>
-              <Block middle>
-                <Text bold size={12} style={{ marginBottom: 4 }}>
-                  89
-                </Text>
-                <Text size={12}>Comments</Text>
-              </Block>
-            </Block>
-          </Block>
-          <Block flex>
-              <Block middle style={styles.nameInfo}>
-                <Text bold size={28} color="#32325D">
-                  Jessica Jones, 27
-                </Text>
-                <Text size={16} color="#32325D" style={{ marginTop: 10 }}>
-                  San Francisco, USA
-                </Text>
-              </Block>
-              <Block middle style={{ marginTop: 30, marginBottom: 16 }}>
-                <Block style={styles.divider} />
-              </Block>
-              <Block middle>
-                <Text size={16} color="#525F7F" style={{ textAlign: "center" }}>
-                  An artist of considerable range, Jessica name taken by
-                  Melbourne …
-                </Text>
-                <Button
-                  color="transparent"
-                  textStyle={{
-                    color: "#233DD2",
-                    fontWeight: "500",
-                    fontSize: 16
-                  }}
-                >
-                  Show more
-                </Button>
-              </Block>
-              <Block
-                row
-                style={{ paddingVertical: 14, alignItems: "baseline" }}
-              >
-                <Text bold size={16} color="#525F7F">
-                  Album
-                </Text>
-              </Block>
-              <Block
-                row
-                style={{ paddingBottom: 20, justifyContent: "flex-end" }}
-              >
-                <Button
-                  small
-                  color="transparent"
-                  textStyle={{ color: "#5E72E4", fontSize: 12 }}
-                >
-                  View all
-                </Button>
-              </Block>
-              <Block style={{ paddingBottom: -HeaderHeight * 2 }}>
-                <Block row space="between" style={{ flexWrap: "wrap" }}>
-                  {Images.Viewed.map((img, imgIndex) => (
-                    <Image
-                      source={{ uri: img }}
-                      key={`viewed-${img}`}
-                      resizeMode="cover"
-                      style={styles.thumb}
-                    />
-                  ))}
-                </Block>
-              </Block>
-          </Block>
-        </Block>
-                  </ScrollView>*/}
       </Block>
     );
   }
@@ -325,7 +206,6 @@ const styles = StyleSheet.create({
     height: height / 2
   },
   profileCard: {
-    // position: "relative",
     padding: theme.SIZES.BASE,
     marginHorizontal: theme.SIZES.BASE,
     marginTop: 65,
