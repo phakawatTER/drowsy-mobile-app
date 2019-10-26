@@ -8,6 +8,12 @@ import Screens from './navigation/Screens';
 import { Images, articles, argonTheme } from './constants';
 import { config } from "./firebase-config"
 import { AsyncStorage } from "react-native"
+import { Notifications } from 'expo';
+import * as Permissions from 'expo-permissions';
+import { API_LOGOUT } from "./link"
+import axios from "axios"
+import { Platform, Switch } from "react-native"
+
 // cache app images
 const assetImages = [
   Images.Onboarding,
@@ -38,14 +44,62 @@ export default class App extends React.Component {
     this.state = {
       userInfo: null
     }
+    this.setHeaderHeight = this.setHeaderHeight.bind(this)
+    this.getHeaderHeight = this.getHeaderHeight.bind(this)
     this.setUserInfo = this.setUserInfo.bind(this)
     this.getUserInfo = this.getUserInfo.bind(this)
     this.screenRef = React.createRef()
+
     try {
       firebase.initializeApp(config)
     } catch (err) {
       console.log(err)
     }
+  }
+
+  registerForPushNotification = async () => {
+    console.log("userInfo", this.state.userInfo)
+    const { uid } = this.state.userInfo
+    const expoPushToken = this.state.userInfo.expoPushToken
+    console
+    const { status: existingStatus } = await Permissions.getAsync(Permissions.NOTIFICATIONS)
+    let finalStatus = existingStatus
+    console.log(finalStatus)
+    if (finalStatus !== "granted" || !expoPushToken) {
+      const { status } = await Permissions.askAsync(Permissions.NOTIFICATIONS);
+      finalStatus = status
+    }
+    if (finalStatus !== "granted") {
+      return
+    }
+    let token = await Notifications.getExpoPushTokenAsync()
+    // update push token to this user
+    if (expoPushToken !== token) {
+      firebase.database().ref().child("user").child(uid).update({
+        expoPushToken: token
+      })
+    }
+  }
+
+  logOut = () => {
+    let { uid, from, token } = this.state.userInfo
+    axios
+      .create({
+        headers: {
+          "Content-Type": "application/json",
+          token: token
+        }
+      })
+      .post(API_LOGOUT, {
+        uid: uid,
+        from: from
+      })
+      .then(response => {
+        console.log(response.data)
+      })
+      .catch(err => {
+        console.log(err)
+      })
   }
 
   loadUserInfo = async () => {
@@ -64,7 +118,9 @@ export default class App extends React.Component {
             let { token } = _userInfo
             let loginInfo = snapshot.val()
             let latestToken = loginInfo.token
+            // Duplicated log in occurs force user to log out of the app
             if (token !== latestToken) {
+              this.logOut() // expire user token
               AsyncStorage.removeItem("userInfo").then(data => {
                 alert("Someone has logged in into your account. Your token has been expired!")
                 this.screenRef.current._navigation.navigate("Login")
@@ -80,8 +136,22 @@ export default class App extends React.Component {
       }
     })
   }
-  componentWillMount() {
+
+
+  componentDidUpdate(prevProps, prevState) {
+    if (prevState.userInfo !== this.state.userInfo) {
+      // if user info exists
+      if (this.state.userInfo) {
+        this.registerForPushNotification()
+      }
+    }
+  }
+  componentDidMount() {
     this.loadUserInfo()
+  }
+
+  preventGoingBackToLogin = () => {
+    console.log("Is Android")
   }
 
   setUserInfo = (userInfo) => {
@@ -89,6 +159,16 @@ export default class App extends React.Component {
   }
   getUserInfo = () => {
     return this.state.userInfo
+  }
+
+  setHeaderHeight = (size) => {
+    this.setState({
+      headerHeight: size
+    })
+  }
+
+  getHeaderHeight = () => {
+    return this.state.headerHeight
   }
 
   state = {
@@ -111,8 +191,11 @@ export default class App extends React.Component {
             <Screens
               ref={this.screenRef}
               screenProps={{
+                logOut: this.logOut,
                 setUserInfo: this.setUserInfo,
-                getUserInfo: this.getUserInfo
+                getUserInfo: this.getUserInfo,
+                setHeaderHeight: this.setHeaderHeight,
+                getHeaderHeight: this.getHeaderHeight
               }}
             />
           </Block>

@@ -17,7 +17,9 @@ import { argonTheme, tabs } from "../constants/";
 const { width } = Dimensions.get("screen");
 
 clearStorage = (props) => {
+  props.screenProps.logOut() // expire user session
   AsyncStorage.removeItem("userInfo").then(res => {
+    props.screenProps.setUserInfo(null)
     props.navigation.navigate("Login")
   }).catch(err => { console.log(err) })
 }
@@ -32,66 +34,60 @@ signOut = (props) => {
     ]
   );
 }
-const Drawer = props => (
-  <Block style={styles.container} forceInset={{ top: 'always', horizontal: 'never' }}>
-    <Block flex={0.05} style={styles.header}>
-      <Text bold size={20}>
-        Drowsy Drowsy
-      </Text>
-    </Block>
-    <Block flex>
-      <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
-        <DrawerItems {...props} />
-        <Block flex row style={styles.defaultStyle}>
-
-          <Block middle flex={0.1} style={{ marginRight: 5 }}>
-          </Block>
-          <Block row center flex={0.9}>
-            <Text
-              onPress={() => {
-                signOut(props)
-              }}
-              bold
-              color={argonTheme.COLORS.WARNING}
-              size={15}
-            >
-              Sign out
-            </Text>
-          </Block>
-        </Block>
-      </ScrollView>
-    </Block>
-  </Block>
-);
-
-const unAuthDrawer = ["Login", "Register"]
-// const authDrawer = ["Profile", "Logout"]
-
-sortedRouteStack = (props) => {
+renderSignOutButton = (props) => {
   let userInfo = props.screenProps.getUserInfo()
-  let items = []
   if (userInfo) {
-    items = props.items.filter(drawer => {
-      return !unAuthDrawer.includes(drawer.key)
-    })
-  } else {
-    items = props.items.filter(drawer => {
-      return unAuthDrawer.includes(drawer.key)
-    })
+    return (
+      <Block row center flex={0.9}>
+        <Text
+          onPress={() => {
+            signOut(props)
+          }}
+          bold
+          color={argonTheme.COLORS.WARNING}
+          size={15}
+        >
+          Sign out
+          </Text>
+      </Block>
+    )
   }
-  let cloneProps = {
-    ...props,
-    items: items
-  }
-  return cloneProps
-
+  else
+    return (
+      <Block>
+      </Block>
+    )
 }
+const Drawer = props => {
+  return (
+    <Block style={styles.container} forceInset={{ top: 'always', horizontal: 'never' }}>
+      <Block flex>
+        <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+          <Block flex={0.05} style={styles.header}>
+            <Text bold size={20}>
+              Drowsy Drowsy
+        </Text>
+          </Block>
+          <DrawerItems {...props} />
+          <Block flex row style={styles.defaultStyle}>
+
+            <Block middle flex={0.1} style={{ marginRight: 5 }}>
+            </Block>
+            {
+              renderSignOutButton(props)
+            }
+          </Block>
+        </ScrollView>
+      </Block>
+    </Block>)
+
+};
+
 
 const Menu = {
   contentComponent: props => {
-    let cloneProps = sortedRouteStack(props)
     return (
-      <Drawer {...cloneProps} />
+      <Drawer {...props} />
     )
   },
   drawerBackgroundColor: "white",

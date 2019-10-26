@@ -1,5 +1,6 @@
 import React from "react";
 import {
+    ScrollView,
     StyleSheet,
     ImageBackground,
     Dimensions,
@@ -96,12 +97,9 @@ class Login extends React.Component {
         } = this.state
         return (
             // <Block></Block>
-            <Block flex middle>
-                <StatusBar hidden />
-                <ImageBackground
-                    source={Images.RegisterBackground}
-                    style={{ width, height, zIndex: 1 }}
-                >
+            <ScrollView>
+                <Block flex middle>
+                    <StatusBar hidden />
                     <Block flex middle>
                         <Block style={styles.registerContainer}>
                             <Block flex >
@@ -188,8 +186,8 @@ class Login extends React.Component {
                             </Block>
                         </Block>
                     </Block>
-                </ImageBackground>
-            </Block>
+                </Block>
+            </ScrollView>
         );
     }
 }
@@ -197,8 +195,9 @@ class Login extends React.Component {
 const styles = StyleSheet.create({
     registerContainer: {
         width: width * 0.9,
-        height: height * 0.5,
-        backgroundColor: "rgba(255,255,255,0.6)",
+        marginTop: `10%`,
+        // height: height * 0.5,
+        // backgroundColor: "rgba(255,255,255,0.6)",
         borderRadius: 4,
         shadowColor: argonTheme.COLORS.BLACK,
         shadowOffset: {
@@ -211,9 +210,10 @@ const styles = StyleSheet.create({
         overflow: "hidden"
     },
     socialConnect: {
-        backgroundColor: argonTheme.COLORS.WHITE,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderColor: "#8898AA"
+        fontWeight:"bold"
+        // backgroundColor: argonTheme.COLORS.WHITE,
+        // borderBottomWidth: StyleSheet.hairlineWidth,
+        // borderColor: "#8898AA"
     },
     socialButtons: {
         width: 120,

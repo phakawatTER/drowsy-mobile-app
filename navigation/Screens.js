@@ -13,7 +13,7 @@ import Register from "../screens/Register";
 // screens
 import Home from "../screens/Home";
 import Onboarding from "../screens/Onboarding";
-import Pro from "../screens/Pro";
+import Map from "../screens/Map";
 import Profile from "../screens/Profile";
 import Elements from "../screens/Elements";
 import Articles from "../screens/Articles";
@@ -23,6 +23,7 @@ import DrawerItem from "../components/DrawerItem";
 import { AsyncStorage } from 'react-native';
 // header for screens
 import Header from "../components/Header";
+import { argonTheme } from "../constants";
 
 const transitionConfig = (transitionProps, prevTransitionProps) => ({
   transitionSpec: {
@@ -96,14 +97,24 @@ const ProfileStack = createStackNavigator(
       screen: Profile,
       navigationOptions: ({ navigation }) => ({
         header: (
-          <Header  transparent title="Profile" navigation={navigation} />
+          <Header title="Profile" navigation={navigation} />
+        ),
+        headerTransparent: true
+      }),
+
+    },
+    Map: {
+      screen: Map,
+      navigationOptions: ({ navigation }) => ({
+        header: (
+          <Header left={<Block />} white transparent title="" navigation={navigation} />
         ),
         headerTransparent: true
       })
     }
   },
   {
-    cardStyle: { backgroundColor: "#FFFFFF" },
+    cardStyle: { backgroundColor: "#FFFFF" },
     transitionConfig
   }
 );
@@ -113,15 +124,6 @@ const HomeStack = createStackNavigator({
     screen: Home,
     navigationOptions: ({ navigation }) => ({
       header: <Header search options title="Home" navigation={navigation} />
-    })
-  },
-  Pro: {
-    screen: Pro,
-    navigationOptions: ({ navigation }) => ({
-      header: (
-        <Header left={<Block />} white transparent title="" navigation={navigation} />
-      ),
-      headerTransparent: true
     })
   }
 },
@@ -137,55 +139,47 @@ const HomeStack = createStackNavigator({
 const LoginScreen = createStackNavigator({
   Login: {
     screen: Login,
-    navigationOptions: navOpt => ({
-      drawerLabel: ({ focused }) => (
-        <DrawerItem focused={focused} screen="Login" title="Sign in" />
-      )
+    navigationOptions: ({ navigation }) => ({
+      header: <Header navigation={navigation} />
     })
-  },
+  }
 
 })
 
 const RegisterScreen = createStackNavigator({
   Register: {
     screen: Register,
+    navigationOptions: ({ navigation }) => ({
+      header: <Header navigation={navigation} />
+    })
+  }
+})
+
+
+const UnAuthStack = createDrawerNavigator({
+  Login: {
+    screen: LoginScreen,
+    navigationOptions: navOpt => ({
+      drawerLabel: ({ focused }) => (
+        <DrawerItem focused={focused} screen="Login" title="Sign in" />
+      )
+    })
+  },
+  Register: {
+    screen: RegisterScreen,
     navigationOptions: navOpt => ({
       drawerLabel: ({ focused }) => (
         <DrawerItem focused={focused} screen="Register" title="Sign up" />
       )
     })
   },
-})
+
+}, Menu)
 
 // console.log(AuthStack)
-const AppStack = createDrawerNavigator(
+const AuthStack = createDrawerNavigator(
   {
-    Login: {
-      screen: LoginScreen,
-      navigationOptions: navOpt => ({
-        drawerLabel: ({ focused }) => (
-          <DrawerItem focused={focused} screen="Login" title="Sign in" />
-        )
-      })
-    },
-    Register: {
-      screen: RegisterScreen,
-      navigationOptions: navOpt => ({
-        drawerLabel: ({ focused }) => (
-          <DrawerItem focused={focused} screen="Register" title="Sign up" />
-        )
-      })
-    },
 
-    // Register
-    Home: {
-      screen: HomeStack,
-      navigationOptions: navOpt => ({
-        drawerLabel: ({ focused }) => (
-          <DrawerItem focused={focused} title="Home" />
-        )
-      })
-    },
     Profile: {
       screen: ProfileStack,
       navigationOptions: navOpt => ({
@@ -195,26 +189,31 @@ const AppStack = createDrawerNavigator(
       })
     },
 
-    // Elements: {
-    //   screen: ElementsStack,
-    //   navigationOptions: navOpt => ({
-    //     drawerLabel: ({ focused }) => (
-    //       <DrawerItem focused={focused} screen="Elements" title="Elements" />
-    //     )
-    //   })
-    // },
-    // Articles: {
-    //   screen: ArticlesStack,
-    //   navigationOptions: navOpt => ({
-    //     drawerLabel: ({ focused }) => (
-    //       <DrawerItem focused={focused} screen="Articles" title="Articles" />
-    //     )
-    //   })
-    // },
-    
+    Elements: {
+      screen: ElementsStack,
+      navigationOptions: navOpt => ({
+        drawerLabel: ({ focused }) => (
+          <DrawerItem focused={focused} screen="Elements" title="Elements" />
+        )
+      })
+    },
+    Articles: {
+      screen: ArticlesStack,
+      navigationOptions: navOpt => ({
+        drawerLabel: ({ focused }) => (
+          <DrawerItem focused={focused} screen="Articles" title="Articles" />
+        )
+      })
+    },
+
   },
   Menu
 );
 
-const AppContainer = createAppContainer(AppStack);
+const AppSwitch = createSwitchNavigator({
+  UnAuthStack: UnAuthStack,
+  AuthStack: AuthStack
+})
+
+const AppContainer = createAppContainer(AppSwitch);
 export default AppContainer;

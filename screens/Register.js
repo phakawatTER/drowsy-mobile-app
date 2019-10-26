@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  ScrollView,
   StyleSheet,
   ImageBackground,
   Dimensions,
@@ -164,7 +165,10 @@ class Register extends React.Component {
           if (response.status === 200) {
             let data = response.data
             let { code } = data
-            if (code === 200) { }
+            if (code === 200) {
+              alert("Successfully registered")
+              this.props.navigation.navigate("Login")
+            }
             else if (code === 410) {
               this.setState({
                 emailState: "danger"
@@ -176,7 +180,7 @@ class Register extends React.Component {
           console.log(err)
         })
 
-    }else {
+    } else {
       alert("Check your input information")
     }
 
@@ -194,21 +198,24 @@ class Register extends React.Component {
       conpassword
     } = this.state
     return (
+
       <Block flex middle>
+
         <StatusBar hidden />
-        <ImageBackground
-          source={Images.RegisterBackground}
-          style={{ width, height, zIndex: 1 }}
-        >
-          <Block flex middle>
-            <Block style={styles.registerContainer}>
-              <Block flex >
+        <Block flex middle>
+
+          <Block flex style={styles.registerContainer}>
+            <ScrollView
+              vertical
+            >
+              <Block flex style={{ marginTop: "10%" }}>
                 <Block flex={0.1} middle style={styles.socialConnect}>
                   <Text color="#8898AA" size={25}>
                     Sign up
                 </Text>
                 </Block>
-                <Block flex center>
+
+                <Block flex center style={{ paddingBottom: 15 }}>
                   <KeyboardAvoidingView
                     style={{ flex: 1 }}
                     behavior="padding"
@@ -366,10 +373,10 @@ class Register extends React.Component {
                   </KeyboardAvoidingView>
                 </Block>
               </Block>
-            </Block>
+            </ScrollView>
           </Block>
-        </ImageBackground>
-      </Block>
+        </Block>
+      </Block >
     );
   }
 }
@@ -378,7 +385,7 @@ const styles = StyleSheet.create({
   registerContainer: {
     width: width * 0.9,
     height: height * 0.78,
-    backgroundColor: "#F4F5F7",
+    // backgroundColor: "#F4F5F7",
     borderRadius: 4,
     shadowColor: argonTheme.COLORS.BLACK,
     shadowOffset: {
@@ -391,9 +398,10 @@ const styles = StyleSheet.create({
     overflow: "hidden"
   },
   socialConnect: {
-    backgroundColor: argonTheme.COLORS.WHITE,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: "#8898AA"
+    fontWeight: "bold"
+    // backgroundColor: argonTheme.COLORS.WHITE,
+    // borderBottomWidth: StyleSheet.hairlineWidth,
+    // borderColor: "#8898AA"
   },
   socialButtons: {
     width: 120,
