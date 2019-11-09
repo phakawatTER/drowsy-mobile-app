@@ -15,6 +15,7 @@ import Home from "../screens/Home";
 import Onboarding from "../screens/Onboarding";
 import Map from "../screens/Map";
 import Profile from "../screens/Profile";
+import EditProfile from "../screens/EditProfile"
 import Elements from "../screens/Elements";
 import Articles from "../screens/Articles";
 // drawer
@@ -103,6 +104,15 @@ const ProfileStack = createStackNavigator(
       }),
 
     },
+    EditProfile: {
+      screen: EditProfile,
+      navigationOptions: ({ navigation }) => ({
+        header: (
+          <Header title="Edit Profile" navigation={navigation} />
+        ),
+        headerTransparent: true
+      }),
+    },
     Map: {
       screen: Map,
       navigationOptions: ({ navigation }) => ({
@@ -114,7 +124,7 @@ const ProfileStack = createStackNavigator(
     }
   },
   {
-    cardStyle: { backgroundColor: "#FFFFF" },
+    cardStyle: { backgroundColor: "#FFFFFF" },
     transitionConfig
   }
 );

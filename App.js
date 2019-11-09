@@ -61,7 +61,6 @@ export default class App extends React.Component {
     console.log("userInfo", this.state.userInfo)
     const { uid } = this.state.userInfo
     const expoPushToken = this.state.userInfo.expoPushToken
-    console
     const { status: existingStatus } = await Permissions.getAsync(Permissions.NOTIFICATIONS)
     let finalStatus = existingStatus
     console.log(finalStatus)

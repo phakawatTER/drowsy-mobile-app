@@ -1,22 +1,60 @@
 import React from 'react';
-import { ImageBackground, Image, StyleSheet, StatusBar, Dimensions, Platform } from 'react-native';
+import { ImageBackground, Image, StyleSheet, StatusBar, Dimensions, Platform, AsyncStorage } from 'react-native';
 import { Block, Button, Text, theme } from 'galio-framework';
-
+import firebase from "firebase"
 const { height, width } = Dimensions.get('screen');
 import { Images, argonTheme } from '../constants';
 import { HeaderHeight } from "../constants/utils";
 import MapView from 'react-native-maps';
-export default class Pro extends React.Component {
+import { config } from "../firebase-config"
 
+export default class Pro extends React.Component {
   constructor(props) {
     super(props)
-    this.state = {}
+    this.state = {
+      location: { lat: 0, lng: 0 },// current location of user car ,
+      gasdata: { co: 0, lpg: 0 }
+    }
     // Reference to map
     this.mapRef = React.createRef()
     this.markerRef = React.createRef()
     this.onMapReadyDisplay = this.onMapReadyDisplay.bind(this)
-    // this.onMapMove = this.onMapMove.bind(this)
+    try {
+      firebase.initializeApp(config)
+    } catch (err) {
+      // console.log(err)
+    }
   }
+  loadUserInfo = async () => {
+    let userInfo = AsyncStorage.getItem("userInfo").then(data => {
+      let { navigation } = this.props
+      let handle = navigation.getParam("handle")
+      let userInfo = JSON.parse(data)
+      let { uid } = userInfo
+      this.setState({ userInfo })
+      if (handle !== "tracking") return
+      let locationRef = firebase.database().ref().child("location").child(uid).orderByKey().limitToLast(1)
+      locationRef.on("child_added", snapshot => {
+        let location = snapshot.val()
+        this.setState({ location }, () => {
+          this.updateCarMaker()
+        })
+      })
+
+      let gasRef = firebase.database().ref().child("gaslevel").child(uid).orderByKey().limitToLast(1)
+      gasRef.on("child_added", snapshot => {
+        let gasdata = snapshot.val()
+        this.setState({ gasdata }, () => { console.log(this.state.gasdata) })
+      })
+
+    }).catch(err => {
+      console.log(err)
+    })
+  }
+
+  componentWillUnmount() {
+  }
+
 
   componentDidMount() {
     let { navigation } = this.props
@@ -28,10 +66,17 @@ export default class Pro extends React.Component {
       back: back,
       time: time
     })
+    this.loadUserInfo()
   }
 
-  finishMove = () => {
-
+  updateCarMaker = () => {
+    let { location } = this.state
+    let region = {
+      latitude: location.lat,
+      longitude: location.lng
+    }
+    this.mapRef.current.animateToCoordinate(region, 1000)
+    this.mapRef.current.fitToCoordinates([region], { animated: true })
   }
 
   onMapReadyDisplay = async () => {
@@ -55,6 +100,33 @@ export default class Pro extends React.Component {
     const { navigation } = this.props;
     const handle = navigation.getParam("handle")
     const { latlng, time } = this.state
+    const renderCarMarker = () => {
+      return (
+        this.state.latlng ?
+          <MapView.Marker
+            ref={this.markerRef}
+            title={this.props.navigation.getParam("event")=="Over CO"?
+            "Dangerous CO level has been detected!"
+            :
+            "Driver Drowsiness has been detected!"
+          }
+            description={`Occured at: ${time}`}
+            coordinate={{
+              latitude: parseFloat(latlng[0]),
+              longitude: parseFloat(latlng[1]),
+            }}
+          />
+          :
+          <MapView.Marker
+            coordinate={{
+              latitude: this.state.location.lat,
+              longitude: this.state.location.lng
+            }}
+          />
+      )
+    }
+
+
     return (
       <Block flex style={styles.container}>
         <StatusBar barStyle="light-content" />
@@ -70,10 +142,10 @@ export default class Pro extends React.Component {
                     space={"evenly"}
                   >
                     <Text color={"#FFFFFF"} bold>
-                      Current Speed :164 km/h
+                      Current Speed :0 km/h
                   </Text>
                     <Text color={"#FFFFFF"} bold>
-                      CO2 level: 21.25%
+                      CO: {this.state.gasdata.co} ppm
                   </Text>
                   </Block>
                   :
@@ -82,10 +154,10 @@ export default class Pro extends React.Component {
                     space={"evenly"}
                   >
                     <Text color={"#FFFFFF"} bold>
-                      Drowsy at : 21-11-2019 10:23:45 pm
+                      Occured at {this.props.navigation.getParam("time")}
                   </Text>
                     <Text color={"#FFFFFF"} bold>
-                      Current Speed :164 km/h
+                      Current Speed :0 km/h
                   </Text>
                   </Block>
               }
@@ -107,20 +179,7 @@ export default class Pro extends React.Component {
                 longitudeDelta: 0.0421,
               }}
             >
-              {
-                this.state.latlng ?
-                  <MapView.Marker
-                    ref={this.markerRef}
-                    title={"Driver Drowsiness Detected"}
-                    description={`Occured at: ${time}`}
-                    coordinate={{
-                      latitude: parseFloat(latlng[0]),
-                      longitude: parseFloat(latlng[1]),
-                    }}
-                  />
-                  : null
-              }
-
+              {renderCarMarker()}
             </MapView>
             <Button
               shadowless

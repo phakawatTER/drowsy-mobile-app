@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
+import * as Calendar from 'expo-calendar';
+import * as Permissions from 'expo-permissions';
 import {
   Animated,
   StyleSheet,
@@ -14,6 +16,7 @@ import {
   TouchableHighlight
 
 } from "react-native";
+import Spinner from "react-native-loading-spinner-overlay"
 import { Block, Text, theme } from "galio-framework";
 import { Button } from "../components";
 import { Images, argonTheme } from "../constants";
@@ -24,7 +27,6 @@ import axios from "axios"
 import moment from "moment"
 import firebase from "firebase"
 import { config } from "../firebase-config"
-import EditUserInfoModal from "../components/EditUserInfoModal"
 import { Audio } from 'expo-av';
 import Toast, { DURATION } from 'react-native-easy-toast'
 
@@ -44,7 +46,7 @@ class Profile extends React.Component {
       slides: [],
       notificationRecs: [],
       isLoading: true,
-      displayPerPage: 7,
+      displayPerPage: 15,
       currentUser: "",
       listIndex: 0,
       userInfo: {
@@ -96,6 +98,8 @@ class Profile extends React.Component {
   }
 
   componentDidMount() {
+    this.getCalendarPermission()
+    // this.createCalendarEvent()
     const { navigation } = this.props;
     this.focusListener = navigation.addListener('didFocus', () => {
       const { notificationRecs } = this.state
@@ -106,12 +110,55 @@ class Profile extends React.Component {
   }
 
   componentDidUpdate(nextProps, nextState) {
-    // console.log("next state", nextState)
+
+    // IF NEW EVENT ADDED INTO THE RECORD SO ANIMATE LATEST BLOCK BACKGROUND
     if (this.state.notificationRecs.length !== 0 && this.state.modalVisible) {
       if (nextState.notificationRecs.length !== this.state.notificationRecs) {
         this.fadeOut()
       }
     }
+  }
+
+  componentWillUnmount() {
+    let notificationRef = firebase
+      .database().ref()
+      .child("notification").child(uid).limitToLast(1)
+    notificationRef.off("child_added") // turn off notification on when unmount
+  }
+
+  getCalendarPermission = async () => {
+    let { status } = await Permissions.getAsync(Permissions.CALENDAR)
+    if (status !== "granted") {
+      status = await Permissions.askAsync(Permissions.CALENDAR)
+    }
+    console.log(status)
+  }
+
+  createCalendarEvent = async () => {
+    await Calendar.getCalendarsAsync().then(data => {
+      let calendar = data.find(calendar => {
+        return calendar.title === "Calendar"
+      })
+      console.log(calendar)
+      Calendar.createEventAsync(calendar.id, {
+        endDate: moment(new Date()).format("YYYY-MM-DDTHH:mm:ss.sssZ").toString(),
+        location: "...",
+        notes: "...",
+        startDate: moment(new Date()).format("YYYY-MM-DDTHH:mm:ss.sssZ").toString(),
+        // timeZone: "GMT-7",
+        title: "TEST NAJA",
+        url: "http://www...",
+        // title: "ALARM TEST",
+        // startDate: new Date(),
+        alarms: [{ relativeOffset: 0 }]
+      }).then(data => {
+        console.log(data)
+      }).catch(err => {
+        console.log(err)
+      })
+
+    }).catch(err => { console.log(err) })
+
   }
 
   showModal = () => {
@@ -241,10 +288,8 @@ class Profile extends React.Component {
       <Block style={{ width: listWidth }} >
         {
           item.map((obj, key) => {
-            let timestamp = obj.timestamp
-            let { timestamp: latestTimestamp } = this.state.notificationRecs[0]
-            if (timestamp === latestTimestamp) {
-            }
+            let { timestamp, event } = obj
+            let { timestamp: latestTimestamp } = this.state.notificationRecs[0] // TIMESTAMP OF THE LATEST EVENT
             datetime = moment(timestamp).format("DD-MM-YYYY  hh:MM:ss a")
             return (
               <Animated.View
@@ -252,6 +297,7 @@ class Profile extends React.Component {
                   marginLeft: 0,
                   paddingHorizontal: 0,
                   paddingVertical: 0,
+                  // IF LATEST TIMESTAMP = TIMESTAMP THEN ANIMATE BACKGROUND COLOR
                   ...timestamp === latestTimestamp && this.state.modalVisible ? {
                     backgroundColor: this.state.fadeOut.interpolate({
                       inputRange: [0, 1],
@@ -259,7 +305,7 @@ class Profile extends React.Component {
                     })
                   } : {}
                 }}
-                key={key} >
+                key={`event-${key}`} >
                 <Block
                   middle
                   row
@@ -269,7 +315,7 @@ class Profile extends React.Component {
                   }}
                 >
                   <Text>
-                    <Text bold>Drowsiness</Text> {datetime}
+                    <Text bold>{event}</Text> {datetime}
                   </Text>
                   <Button
                     onPress={() => {
@@ -278,7 +324,8 @@ class Profile extends React.Component {
                         handle: "display",
                         time: datetime,
                         latlng: obj.latlng, // latitude and longtitude of drowsiness
-                        back: "Profile" // location when press back
+                        back: "Profile", // location when press back
+                        event: event
                       })
                     }}
                     small
@@ -299,9 +346,11 @@ class Profile extends React.Component {
   render() {
     const { fname, lname, profile, regisdate } = this.state.userInfo
     return (
-      <Block flex style={{
-      }}>
-        {/* Modal  */}
+      <Block flex>
+        <Spinner
+          visible={this.state.isLoading}
+          textStyle={styles.spinnerTextStyle}
+        />
         <Modal
           animationType="fade"
           transparent={true}
@@ -330,15 +379,10 @@ class Profile extends React.Component {
               opacity={0.9} />
           </View>
         </Modal>
-
-        <EditUserInfoModal
-          ref={this.modalRef}
-        ></EditUserInfoModal>
         <ScrollView
           vertical={true}
           showsVerticalScrollIndicator={false}
           style={{
-            // backgroundColor: "green",
             width,
             marginTop: Platform.OS === "ios" ? this.state.headerHeight : 0,
           }}
@@ -346,8 +390,7 @@ class Profile extends React.Component {
           <Block flex style={{ ...styles.profileCard }}>
             <Block middle style={styles.avatarContainer}>
               <Image
-                // source={profile ? { uri: profile } : Images.defaultAvatar}
-                source={profile ? { uri: profile } : { uri: "https://images.unsplash.com/photo-1492633423870-43d1cd2775eb?fit=crop&w=1650&q=80" }}
+                source={profile ? { uri: profile } : Images.defaultAvatar}
                 style={styles.avatar}
               />
             </Block>
@@ -360,13 +403,16 @@ class Profile extends React.Component {
               >
                 <Button
                   onPress={() => {
-                    this.showModal()
+                    // this.showModal()
+                    this.props.navigation.navigate("EditProfile", {
+                      userInfo: this.state.userInfo
+                    })
                   }}
                   small
-                  style={{ backgroundColor: argonTheme.COLORS.INFO }}
+                  style={{ backgroundColor: argonTheme.COLORS.WARNING }}
                 >
                   Edit
-                    </Button>
+                </Button>
                 <Button
                   small
                   style={{ backgroundColor: argonTheme.COLORS.DEFAULT }}
@@ -397,13 +443,12 @@ class Profile extends React.Component {
               </Block>
               <Block>
                 <Text bold size={28} color="#32325D">
-                  Drowsy Records
+                  Warning Records
                     </Text>
                 <Text size={20}>
-                  <Text color={argonTheme.COLORS.WARNING}>{this.state.notificationRecs.length} </Text>
-                  <Text>
-                    record(s)
-                    </Text>
+                  total
+                  <Text color={argonTheme.COLORS.WARNING}> {this.state.notificationRecs.length} </Text>
+                  record(s)
                 </Text>
                 <Block style={{ paddingTop: 20, paddingBottom: 30 }}
                   onLayout={(event) => {
@@ -515,7 +560,7 @@ const styles = StyleSheet.create({
     width: 124,
     height: 124,
     borderRadius: 62,
-    borderWidth: 4,
+    borderWidth: 1,
   },
   nameInfo: {
     marginTop: 35
