@@ -5,16 +5,27 @@ import firebase from "firebase"
 const { height, width } = Dimensions.get('screen');
 import { Images, argonTheme } from '../constants';
 import { HeaderHeight } from "../constants/utils";
-import MapView from 'react-native-maps';
+import MapView, { AnimatedRegion, Marker } from 'react-native-maps';
 import { config } from "../firebase-config"
 
 export default class Pro extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
-      location: { lat: 0, lng: 0 },// current location of user car ,
+      speed: 0,
+      direction: 0,
+      // location: { lat: 0, lng: 0 },// current location of user car ,
+      animated_location: new AnimatedRegion({
+        latitude: 0,
+        longitude: 0
+      }),
+      location: {
+        latitude: 0,
+        longitude: 0
+      },
       gasdata: { co: 0, lpg: 0 }
     }
+
     // Reference to map
     this.mapRef = React.createRef()
     this.markerRef = React.createRef()
@@ -33,20 +44,42 @@ export default class Pro extends React.Component {
       let { uid } = userInfo
       this.setState({ userInfo })
       if (handle !== "tracking") return
-      let locationRef = firebase.database().ref().child("location").child(uid).orderByKey().limitToLast(1)
-      locationRef.on("child_added", snapshot => {
-        let location = snapshot.val()
-        this.setState({ location }, () => {
-          this.updateCarMaker()
+      let databaseRef = firebase.database().ref()
+      let latestTrip = databaseRef.child(`trip/${uid}`)
+      latestTrip.on("value", snapshot => {
+        trip = snapshot.val()
+        acctime = null
+        Object.keys(trip).map(key => {
+          acctime = key
+        })
+
+
+        let tripDataRef = databaseRef.child(`trip/${uid}/${acctime}`).orderByKey().limitToLast(1)
+        tripDataRef.on("child_added", snapshot => {
+          console.log(snapshot.val())
+          let tripdata = snapshot.val()
+          let coordinate = tripdata.latlng // COORDINATE OF VEHICLE
+          let co = tripdata.co // CO LEVEL
+          let direction = tripdata.direction
+          let speed = tripdata.speed
+          console.log(coordinate)
+          this.setState({
+            speed,
+            direction,
+            location: {
+              latitude: parseFloat(coordinate[0]),
+              longitude: parseFloat(coordinate[1])
+            }, gasdata: { co: co },
+            animated_location: new AnimatedRegion({
+              latitude: parseFloat(coordinate[0]),
+              longitude: parseFloat(coordinate[1])
+            })
+          }, () => {
+            // console.log(this.state.location)
+            this.updateCarMarker()
+          })
         })
       })
-
-      let gasRef = firebase.database().ref().child("gaslevel").child(uid).orderByKey().limitToLast(1)
-      gasRef.on("child_added", snapshot => {
-        let gasdata = snapshot.val()
-        this.setState({ gasdata }, () => { console.log(this.state.gasdata) })
-      })
-
     }).catch(err => {
       console.log(err)
     })
@@ -61,37 +94,54 @@ export default class Pro extends React.Component {
     let latlng = navigation.getParam("latlng")
     let back = navigation.getParam("back")
     let time = navigation.getParam("time")
+    // alert(JSON.stringify(latlng))
     this.setState({
-      latlng: latlng,
+      location: latlng ? {
+        latitude: parseFloat(latlng[0]),
+        longitude: parseFloat(latlng[1])
+      } : this.state.location,
       back: back,
       time: time
     })
     this.loadUserInfo()
   }
 
-  updateCarMaker = () => {
-    let { location } = this.state
-    let region = {
-      latitude: location.lat,
-      longitude: location.lng
+  componentWillUpdate(nextProps, nextState) {
+    // IF CURRENT LOCATION IS NOT THE SAME AS THE NEXT LOCATION SO ANIMATE MARKER
+    if (this.state.location !== nextState.location) {
+      if (Platform.OS == "Andriod") {
+        this.markerRef.current.animateMarkerToCoordinate(nextState.location, 3200);
+      } else {
+        // alert(JSON.stringify(nextProps.animated_location))
+        this.state.animated_location.timing({ ...nextState.animated_location}).start()
+      }
     }
-    this.mapRef.current.animateToCoordinate(region, 1000)
-    this.mapRef.current.fitToCoordinates([region], { animated: true })
+  }
+
+  updateCarMarker = () => {
+    let { location} = this.state
+    // this.mapRef.current.animateToCoordinate coordinate, 1000)
+    let camera = {
+      center: location,
+      pitch: 10
+    }
+    this.mapRef.current.animateCamera(camera, { duration: 3200 })
+
   }
 
   onMapReadyDisplay = async () => {
-    let { latlng } = this.state
-    let region = {
-      latitude: parseFloat(latlng[0]),
-      longitude: parseFloat(latlng[1]),
-    }
+    let { location } = this.state
+    // let region = {
+    //   latitude: parseFloat(latlng[0]),
+    //   longitude: parseFloat(latlng[1]),
+    // }
     // console.log(latlng)
-    this.mapRef.current.animateToCoordinate(region, 2000)
+    this.mapRef.current.animateCamera({ center: location }, { duration: 2000 })
     setTimeout(() => {
       try {
         this.markerRef.current.showCallout()
-        this.mapRef.current.fitToCoordinates([region], { animated: true })
-      } catch (err) { }
+        this.mapRef.current.fitToCoordinates([location], { animated: true })
+      } catch (err) { console.log("THIS IS ERROR", err) }
 
     }, 2000)
   }
@@ -99,30 +149,43 @@ export default class Pro extends React.Component {
   render() {
     const { navigation } = this.props;
     const handle = navigation.getParam("handle")
-    const { latlng, time } = this.state
+    const { time } = this.state
     const renderCarMarker = () => {
+      console.log(this.state.location)
+      // alert(JSON.stringify(this.state.location))
       return (
-        this.state.latlng ?
-          <MapView.Marker
+        handle === "display" ?
+          <Marker
             ref={this.markerRef}
-            title={this.props.navigation.getParam("event")=="Over CO"?
-            "Dangerous CO level has been detected!"
-            :
-            "Driver Drowsiness has been detected!"
-          }
+            title={this.props.navigation.getParam("event") == "Over CO" ?
+              "Dangerous CO level has been detected!"
+              :
+              "Driver Drowsiness has been detected!"
+            }
             description={`Occured at: ${time}`}
-            coordinate={{
-              latitude: parseFloat(latlng[0]),
-              longitude: parseFloat(latlng[1]),
-            }}
-          />
+            coordinate={this.state.location}
+          >
+            <Image source={Images.saloon} style={{
+              width: 40,
+              height: 60,
+              transform: [
+                { rotate: `${this.state.direction}deg` }
+              ]
+            }} />
+          </Marker>
           :
-          <MapView.Marker
-            coordinate={{
-              latitude: this.state.location.lat,
-              longitude: this.state.location.lng
-            }}
-          />
+          <Marker.Animated
+            ref={this.markerRef}
+            coordinate={this.state.animated_location}
+          >
+            <Image source={Images.saloon} style={{
+              width: 40,
+              height: 60,
+              transform: [
+                { rotate: `${this.state.direction}deg` }
+              ]
+            }} />
+          </Marker.Animated>
       )
     }
 
@@ -142,7 +205,7 @@ export default class Pro extends React.Component {
                     space={"evenly"}
                   >
                     <Text color={"#FFFFFF"} bold>
-                      Current Speed :0 km/h
+                      Current Speed :{parseFloat(this.state.speed).toFixed(2)} km/h
                   </Text>
                     <Text color={"#FFFFFF"} bold>
                       CO: {this.state.gasdata.co} ppm
@@ -155,7 +218,7 @@ export default class Pro extends React.Component {
                   >
                     <Text color={"#FFFFFF"} bold>
                       Occured at {this.props.navigation.getParam("time")}
-                  </Text>
+                    </Text>
                     <Text color={"#FFFFFF"} bold>
                       Current Speed :0 km/h
                   </Text>
@@ -170,6 +233,8 @@ export default class Pro extends React.Component {
                   this.onMapReadyDisplay()
                   : () => { }
               }}
+              // scrollEnabled={handle == "display" ? true : false}
+              // zoomEnabled={handle == "display" ? true : false}
               ref={this.mapRef}
               style={{ ...styles.mapStyle }}
               initialRegion={{

@@ -10,6 +10,7 @@ import {
 import { Block } from "galio-framework";
 import Login from "../screens/Login";
 import Register from "../screens/Register";
+import History from "../screens/History"
 // screens
 import Home from "../screens/Home";
 import Onboarding from "../screens/Onboarding";
@@ -96,12 +97,14 @@ const ProfileStack = createStackNavigator(
   {
     Profile: {
       screen: Profile,
-      navigationOptions: ({ navigation }) => ({
-        header: (
-          <Header title="Profile" navigation={navigation} />
-        ),
-        headerTransparent: true
-      }),
+      navigationOptions: ({ navigation }) => {
+        return ({
+          header: (
+            <Header title="Profile" navigation={navigation} search />
+          ),
+          headerTransparent: true
+        })
+      },
 
     },
     EditProfile: {
@@ -117,7 +120,7 @@ const ProfileStack = createStackNavigator(
       screen: Map,
       navigationOptions: ({ navigation }) => ({
         header: (
-          <Header left={<Block />} white transparent title="" navigation={navigation} />
+          <Header left={<Block />} transparent iconColor="white" navigation={navigation} />
         ),
         headerTransparent: true
       })
@@ -128,6 +131,19 @@ const ProfileStack = createStackNavigator(
     transitionConfig
   }
 );
+
+const HistoryStack = createStackNavigator({
+  History: {
+    screen: History,
+    navigationOptions: ({ navigation }) => ({
+      header: (
+        <Header title="History" navigation={navigation} noShadow />
+      ),
+      headerTransparent: false
+    }),
+
+  }
+}, { cardStyle: { backgroundColor: "#FFFFFF" }, transitionConfig })
 
 const HomeStack = createStackNavigator({
   Home: {
@@ -190,6 +206,7 @@ const UnAuthStack = createDrawerNavigator({
 const AuthStack = createDrawerNavigator(
   {
 
+
     Profile: {
       screen: ProfileStack,
       navigationOptions: navOpt => ({
@@ -198,6 +215,16 @@ const AuthStack = createDrawerNavigator(
         )
       })
     },
+    History: {
+      screen: HistoryStack,
+      navigationOptions: navOpt => ({
+        drawerLabel: ({ focused }) => (
+          <DrawerItem focused={focused} screen="History" title="History" />
+        )
+      })
+    },
+
+
 
     Elements: {
       screen: ElementsStack,
@@ -207,14 +234,14 @@ const AuthStack = createDrawerNavigator(
         )
       })
     },
-    Articles: {
-      screen: ArticlesStack,
-      navigationOptions: navOpt => ({
-        drawerLabel: ({ focused }) => (
-          <DrawerItem focused={focused} screen="Articles" title="Articles" />
-        )
-      })
-    },
+    // Articles: {
+    //   screen: ArticlesStack,
+    //   navigationOptions: navOpt => ({
+    //     drawerLabel: ({ focused }) => (
+    //       <DrawerItem focused={focused} screen="Articles" title="Articles" />
+    //     )
+    //   })
+    // },
 
   },
   Menu

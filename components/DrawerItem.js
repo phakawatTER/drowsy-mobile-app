@@ -76,6 +76,15 @@ class DrawerItem extends React.Component {
             color={focused ? "white" : argonTheme.COLORS.ICON}
           />
         );
+      case "History":
+        return (
+          <Icon
+            name="calendar-date"
+            family="ArgonExtra"
+            size={12}
+            color={focused ? "white" : argonTheme.COLORS.ICON}
+          />
+        );
       case "Account":
         return (
           <Icon
@@ -130,7 +139,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14
   },
   activeStyle: {
-    backgroundColor: argonTheme.COLORS.ACTIVE,
+    backgroundColor: argonTheme.COLORS.DEFAULT,
     borderRadius: 4
   },
   shadow: {

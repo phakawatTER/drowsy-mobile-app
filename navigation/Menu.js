@@ -65,7 +65,7 @@ const Drawer = props => {
         <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
           <Block flex={0.05} style={styles.header}>
             <Text bold size={20}>
-              Drowsy Drowsy
+              Drowsy นะจ๊ะ
         </Text>
           </Block>
           <DrawerItems {...props} />

@@ -1,6 +1,4 @@
 import React from "react";
-import * as Calendar from 'expo-calendar';
-import * as Permissions from 'expo-permissions';
 import {
   Animated,
   StyleSheet,
@@ -29,6 +27,7 @@ import firebase from "firebase"
 import { config } from "../firebase-config"
 import { Audio } from 'expo-av';
 import Toast, { DURATION } from 'react-native-easy-toast'
+import Header from "../components/Header"
 
 const { width, height } = Dimensions.get("screen");
 const thumbMeasure = (width - 48 - 32) / 3;
@@ -39,6 +38,7 @@ class Profile extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
+      searchQuery: "",
       fadeOut: new Animated.Value(0),
       modalVisible: false,
       shouldFetch: true,
@@ -98,15 +98,20 @@ class Profile extends React.Component {
   }
 
   componentDidMount() {
-    this.getCalendarPermission()
-    // this.createCalendarEvent()
     const { navigation } = this.props;
+    this.props.navigation.setParams({
+      profileSearch: this.searchEvent
+    })
     this.focusListener = navigation.addListener('didFocus', () => {
       const { notificationRecs } = this.state
       if (notificationRecs.length === 0) {
         this.getNotificationRecord()
       }
     });
+    this.leaveListener = navigation.addListener('didBlur', () => {
+      this.setState({ searchQuery: "" })
+
+    })
   }
 
   componentDidUpdate(nextProps, nextState) {
@@ -126,348 +131,335 @@ class Profile extends React.Component {
     notificationRef.off("child_added") // turn off notification on when unmount
   }
 
-  getCalendarPermission = async () => {
-    let { status } = await Permissions.getAsync(Permissions.CALENDAR)
-    if (status !== "granted") {
-      status = await Permissions.askAsync(Permissions.CALENDAR)
-    }
-    console.log(status)
+  searchEvent = (query) => {
+    this.setState({ searchQuery: query })
+
   }
 
-  createCalendarEvent = async () => {
-    await Calendar.getCalendarsAsync().then(data => {
-      let calendar = data.find(calendar => {
-        return calendar.title === "Calendar"
+showModal = () => {
+  this.modalRef.current.setModalVisible(true)
+}
+
+getNotificationRecord = () => {
+  this.setState({
+    isLoading: true,
+  })
+  AsyncStorage.getItem("userInfo").then(userInfo => {
+    let { token, uid, from } = JSON.parse(userInfo)
+    let payload = {
+      user_id: uid,
+      from: from
+    }
+    axios
+      .create({
+        headers: { "Content-Type": "application/json", token: token }
       })
-      console.log(calendar)
-      Calendar.createEventAsync(calendar.id, {
-        endDate: moment(new Date()).format("YYYY-MM-DDTHH:mm:ss.sssZ").toString(),
-        location: "...",
-        notes: "...",
-        startDate: moment(new Date()).format("YYYY-MM-DDTHH:mm:ss.sssZ").toString(),
-        // timeZone: "GMT-7",
-        title: "TEST NAJA",
-        url: "http://www...",
-        // title: "ALARM TEST",
-        // startDate: new Date(),
-        alarms: [{ relativeOffset: 0 }]
-      }).then(data => {
-        console.log(data)
+      .post(API_GET_NOTIFICATION_RECORD, payload)
+      .then(response => {
+        let { code, result } = response.data
+        if (code === 200) {
+          this.setState({
+            notificationRecs: result,
+            isLoading: false
+          }, () => {
+            // realtime listener to new coming events
+            // reference to user collection
+            let notificationRef = firebase
+              .database().ref()
+              .child("notification").child(uid).limitToLast(1)
+            // child_added listener
+            notificationRef.on("child_added", (snapshot) => {
+              let found = this.state.notificationRecs.find(obj => {
+                return obj.timestamp === snapshot.val().timestamp
+              })
+              // if new child added to the collection so update it 
+              if (!found) {
+                this.state.notificationRecs = [snapshot.val(), ... this.state.notificationRecs]
+                this.setState({
+                  notificationRecs: this.state.notificationRecs,
+                  modalVisible: true
+                }, () => {
+                  let data = snapshot.val()
+                  // show toast
+                  let { timestamp } = data
+                  timestamp = moment(timestamp).format("DD-MM-YYYY HH:MM:ss a")
+                  this.toastRef.current.show(`Driver Drowsiness Detected! ${timestamp} `, 1500, () => {
+                    this.setState({ modalVisible: false })
+                  });
+                })
+                // play alarm sound
+                const soundObject = new Audio.Sound();
+                try {
+                  soundObject.loadAsync(require('../assets/audio/alarm.mp3')).then(response => {
+                    soundObject.playAsync();
+                    setTimeout(() => {
+                      soundObject.stopAsync()
+                    }, 2000)
+                  })
+                } catch (err) {
+                  console.log(err)
+                }
+              }
+            })
+          })
+        } else {
+          console.log(code)
+        }
       }).catch(err => {
         console.log(err)
       })
+  }).catch(err => {
+    console.log(err)
+  })
+}
 
-    }).catch(err => { console.log(err) })
+onScrollEnd = (e) => {
+  let contentOffset = e.nativeEvent.contentOffset;
+  let viewSize = e.nativeEvent.layoutMeasurement;
 
+  // Divide the horizontal offset by the width of the view to see which page is visible
+  let pageNum = Math.floor(contentOffset.x / viewSize.width);
+  this.setState({
+    listIndex: pageNum
+  })
+}
+renderRecords = () => {
+  let { notificationRecs, searchQuery } = this.state
+  searchQuery = searchQuery.toLowerCase()
+  let tmp_notificationRecs = [...notificationRecs]
+  tmp_notificationRecs = tmp_notificationRecs.filter(data => {
+    let { event, timestamp } = data
+    timestamp = moment(timestamp).format("DD-MM-YYYY  hh:MM:ss a").toString()
+    return timestamp.includes(searchQuery) || event.toLowerCase().includes(searchQuery)
+  })
+  let slides = []
+  var count = 0
+  while (tmp_notificationRecs.length !== 0) {
+    let group = tmp_notificationRecs.slice(0, this.state.displayPerPage)
+    tmp_notificationRecs.splice(0, this.state.displayPerPage)
+    slides[count] = group
+    count = count + 1
   }
 
-  showModal = () => {
-    this.modalRef.current.setModalVisible(true)
-  }
-
-  getNotificationRecord = () => {
-    this.setState({
-      isLoading: true,
-    })
-    AsyncStorage.getItem("userInfo").then(userInfo => {
-      let { token, uid, from } = JSON.parse(userInfo)
-      let payload = {
-        user_id: uid,
-        from: from
-      }
-      axios
-        .create({
-          headers: { "Content-Type": "application/json", token: token }
-        })
-        .post(API_GET_NOTIFICATION_RECORD, payload)
-        .then(response => {
-          let { code, result } = response.data
-          if (code === 200) {
-            this.setState({
-              notificationRecs: result,
-              isLoading: false
-            }, () => {
-              // realtime listener to new coming events
-              // reference to user collection
-              let notificationRef = firebase
-                .database().ref()
-                .child("notification").child(uid).limitToLast(1)
-              // child_added listener
-              notificationRef.on("child_added", (snapshot) => {
-                let found = this.state.notificationRecs.find(obj => {
-                  return obj.timestamp === snapshot.val().timestamp
-                })
-                // if new child added to the collection so update it 
-                if (!found) {
-                  this.state.notificationRecs = [snapshot.val(), ... this.state.notificationRecs]
-                  this.setState({
-                    notificationRecs: this.state.notificationRecs,
-                    modalVisible: true
-                  }, () => {
-                    let data = snapshot.val()
-                    // show toast
-                    let { timestamp } = data
-                    timestamp = moment(timestamp).format("DD-MM-YYYY HH:MM:ss a")
-                    this.toastRef.current.show(`Driver Drowsiness Detected! ${timestamp} `, 1500, () => {
-                      this.setState({ modalVisible: false })
-                    });
-                  })
-                  // play alarm sound
-                  const soundObject = new Audio.Sound();
-                  try {
-                    soundObject.loadAsync(require('../assets/audio/alarm.mp3')).then(response => {
-                      soundObject.playAsync();
-                      setTimeout(() => {
-                        soundObject.stopAsync()
-                      }, 2000)
-                    })
-                  } catch (err) {
-                    console.log(err)
-                  }
-                }
-              })
-            })
-          } else {
-            console.log(code)
-          }
-        }).catch(err => {
-          console.log(err)
-        })
-    }).catch(err => {
-      console.log(err)
-    })
-  }
-
-  onScrollEnd = (e) => {
-    let contentOffset = e.nativeEvent.contentOffset;
-    let viewSize = e.nativeEvent.layoutMeasurement;
-
-    // Divide the horizontal offset by the width of the view to see which page is visible
-    let pageNum = Math.floor(contentOffset.x / viewSize.width);
-    this.setState({
-      listIndex: pageNum
-    })
-  }
-  renderRecords = () => {
-    let { notificationRecs } = this.state
-    let tmp_notificationRecs = [...notificationRecs]
-    let slides = []
-    var count = 0
-    while (tmp_notificationRecs.length !== 0) {
-      let group = tmp_notificationRecs.slice(0, this.state.displayPerPage)
-      tmp_notificationRecs.splice(0, this.state.displayPerPage)
-      slides[count] = group
-      count = count + 1
-    }
-    return (
-      <Block>
-        <FlatList
-          pagingEnabled={true}
-          ref={this.listRef}
-          showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={this.onScrollEnd}
-          horizontal
-          data={slides}
-          renderItem={this._renderItem}
-        />
-        <Block middle style={{ flexDirection: "row", paddingTop: 25 }}>
-          {
-            slides.map((el, index) => {
-              return (
-                <View style={{ ...styles.pagination, ...index === this.state.listIndex ? styles.activeDotStyle : styles.dotStyle }}></View>
-              )
-            })
-          }
-        </Block>
-      </Block >
-    )
-  }
-
-  _renderItem = ({ item, dimensions }) => {
-    return (
-      <Block style={{ width: listWidth }} >
+  return (
+    <Block>
+      <FlatList
+        pagingEnabled={true}
+        ref={this.listRef}
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={this.onScrollEnd}
+        horizontal
+        data={slides}
+        renderItem={this._renderItem}
+      />
+      <Block middle style={{ flexDirection: "row", paddingTop: 25 }}>
         {
-          item.map((obj, key) => {
-            let { timestamp, event } = obj
-            let { timestamp: latestTimestamp } = this.state.notificationRecs[0] // TIMESTAMP OF THE LATEST EVENT
-            datetime = moment(timestamp).format("DD-MM-YYYY  hh:MM:ss a")
+          slides.map((el, index) => {
             return (
-              <Animated.View
-                style={{
-                  marginLeft: 0,
-                  paddingHorizontal: 0,
-                  paddingVertical: 0,
-                  // IF LATEST TIMESTAMP = TIMESTAMP THEN ANIMATE BACKGROUND COLOR
-                  ...timestamp === latestTimestamp && this.state.modalVisible ? {
-                    backgroundColor: this.state.fadeOut.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [argonTheme.COLORS.ERROR, "rgba(255,255,255,1)"]
-                    })
-                  } : {}
-                }}
-                key={`event-${key}`} >
-                <Block
-                  middle
-                  row
-                  space="evenly"
-                  style={{
-                    paddingVertical: 10,
-                  }}
-                >
-                  <Text>
-                    <Text bold>{event}</Text> {datetime}
-                  </Text>
-                  <Button
-                    onPress={() => {
-                      // Navigate to map and send values
-                      this.props.navigation.navigate("Map", {
-                        handle: "display",
-                        time: datetime,
-                        latlng: obj.latlng, // latitude and longtitude of drowsiness
-                        back: "Profile", // location when press back
-                        event: event
-                      })
-                    }}
-                    small
-                    style={{ backgroundColor: argonTheme.COLORS.SUCCESS, paddingHorizontal: 0, paddingVertical: 0 }}
-                  >
-                    Detail
-                  </Button>
-                </Block>
-              </Animated.View>
+              <View style={{ ...styles.pagination, ...index === this.state.listIndex ? styles.activeDotStyle : styles.dotStyle }}></View>
             )
           })
         }
-      </Block >
-    )
-  };
+      </Block>
+    </Block >
+  )
+}
+
+_renderItem = ({ item, dimensions }) => {
 
 
-  render() {
-    const { fname, lname, profile, regisdate } = this.state.userInfo
-    return (
-      <Block flex>
-        <Spinner
-          visible={this.state.isLoading}
-          textStyle={styles.spinnerTextStyle}
-        />
-        <Modal
-          animationType="fade"
-          transparent={true}
-          visible={this.state.modalVisible}
-          onRequestClose={() => {
-            Alert.alert('Modal has been closed.');
-          }}>
-          <View style={{ ...styles.dimmer }} >
-            <Toast
-              onPress={() => {
-                let latestDrowsy = this.state.notificationRecs[0]
-                let { latlng, timestamp } = latestDrowsy
-                datetime = moment(timestamp).format("DD-MM-YYYY HH:MM:ss")
-                this.props.navigation.navigate("Map", {
-                  handle: "display",
-                  time: datetime,
-                  latlng: latlng,
-                  back: "Profile"
-                })
+  return (
+    <Block style={{ width: listWidth }} >
+      {
+        item.map((obj, key) => {
+          let { timestamp, event } = obj
+          let { timestamp: latestTimestamp } = this.state.notificationRecs[0] // TIMESTAMP OF THE LATEST EVENT
+          datetime = moment(timestamp).format("DD-MM-YYYY  hh:MM:ss a")
+          return (
+            <Animated.View
+              style={{
+                marginLeft: 0,
+                paddingHorizontal: 0,
+                paddingVertical: 0,
+                // IF LATEST TIMESTAMP = TIMESTAMP THEN ANIMATE BACKGROUND COLOR
+                ...timestamp === latestTimestamp && this.state.modalVisible ? {
+                  backgroundColor: this.state.fadeOut.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [argonTheme.COLORS.ERROR, "rgba(255,255,255,1)"]
+                  })
+                } : {}
               }}
-              ref={this.toastRef}
-              defaultCloseDelay={1500}
-              style={{ backgroundColor: argonTheme.COLORS.ERROR }}
-              position={"top"}
-              positionValue={this.state.headerHeight - 10}
-              opacity={0.9} />
-          </View>
-        </Modal>
-        <ScrollView
-          vertical={true}
-          showsVerticalScrollIndicator={false}
-          style={{
-            width,
-            marginTop: Platform.OS === "ios" ? this.state.headerHeight : 0,
-          }}
-        >
-          <Block flex style={{ ...styles.profileCard }}>
-            <Block middle style={styles.avatarContainer}>
-              <Image
-                source={profile ? { uri: profile } : Images.defaultAvatar}
-                style={styles.avatar}
-              />
-            </Block>
-            <Block style={styles.info}>
+              key={`event-${key}`} >
               <Block
                 middle
                 row
                 space="evenly"
-                style={{ marginTop: 20, paddingBottom: 24 }}
+                style={{
+                  paddingVertical: 10,
+                }}
               >
+                <Text>
+                  <Text bold>{event}</Text> {datetime}
+                </Text>
                 <Button
                   onPress={() => {
-                    // this.showModal()
-                    this.props.navigation.navigate("EditProfile", {
-                      userInfo: this.state.userInfo
-                    })
-                  }}
-                  small
-                  style={{ backgroundColor: argonTheme.COLORS.WARNING }}
-                >
-                  Edit
-                </Button>
-                <Button
-                  small
-                  style={{ backgroundColor: argonTheme.COLORS.DEFAULT }}
-                  onPress={() => {
+                    // Navigate to map and send values
                     this.props.navigation.navigate("Map", {
-                      handle: "tracking",
-                      back: "Profile"
+                      handle: "display",
+                      time: datetime,
+                      latlng: obj.latlng, // latitude and longtitude of drowsiness
+                      back: "Profile", // location when press back
+                      event: event
                     })
                   }}
+                  small
+                  style={{ backgroundColor: argonTheme.COLORS.SUCCESS, paddingHorizontal: 0, paddingVertical: 0 }}
                 >
-                  Tracking
+                  Detail
+                  </Button>
+              </Block>
+            </Animated.View>
+          )
+        })
+      }
+    </Block >
+  )
+};
+
+
+render() {
+  const { fname, lname, profile, regisdate } = this.state.userInfo
+  return (
+    <Block flex>
+      <Spinner
+        visible={this.state.isLoading}
+        textStyle={styles.spinnerTextStyle}
+      />
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={this.state.modalVisible}
+        onRequestClose={() => {
+          Alert.alert('Modal has been closed.');
+        }}>
+        <View style={{ ...styles.dimmer }} >
+          <Toast
+            onPress={() => {
+              let latestDrowsy = this.state.notificationRecs[0]
+              let { latlng, timestamp } = latestDrowsy
+              datetime = moment(timestamp).format("DD-MM-YYYY HH:MM:ss")
+              this.props.navigation.navigate("Map", {
+                handle: "display",
+                time: datetime,
+                latlng: latlng,
+                back: "Profile"
+              })
+            }}
+            ref={this.toastRef}
+            defaultCloseDelay={1500}
+            style={{ backgroundColor: argonTheme.COLORS.ERROR }}
+            position={"top"}
+            positionValue={this.state.headerHeight - 10}
+            opacity={0.9} />
+        </View>
+      </Modal>
+      <ScrollView
+        vertical={true}
+        showsVerticalScrollIndicator={false}
+        style={{
+          width,
+          marginTop: Platform.OS === "ios" ? this.state.headerHeight : 0,
+        }}
+      >
+        <Block flex style={{ ...styles.profileCard }}>
+          <Block middle style={styles.avatarContainer}>
+            <Image
+              source={profile ? { uri: profile } : Images.defaultAvatar}
+              style={styles.avatar}
+            />
+          </Block>
+          <Block style={styles.info}>
+            <Block
+              middle
+              row
+              space="evenly"
+              style={{ marginTop: 20, paddingBottom: 24 }}
+            >
+              <Button
+                onPress={() => {
+                  // this.showModal()
+                  this.props.navigation.navigate("EditProfile", {
+                    userInfo: this.state.userInfo
+                  })
+                }}
+                small
+                style={{ backgroundColor: argonTheme.COLORS.WARNING }}
+              >
+                Edit
+                </Button>
+              <Button
+                small
+                style={{ backgroundColor: argonTheme.COLORS.DEFAULT }}
+                onPress={() => {
+                  this.props.navigation.navigate("Map", {
+                    handle: "tracking",
+                    back: "Profile"
+                  })
+                }}
+              >
+                Tracking
                     </Button>
-              </Block>
             </Block>
-            <Block flex>
-              <Block middle style={styles.nameInfo}>
-                <Text bold size={28} color="#32325D">
-                  {fname} {lname}
-                </Text>
-              </Block>
-              <Block middle style={styles.nameInfo}>
-                <Text size={15} color="#32325D">
-                  <Text bold>Registered date:</Text> {moment(regisdate).format("DD-MM-YYYY HH:MM:ss")}
-                </Text>
-              </Block>
-              <Block middle style={{ marginTop: 30, marginBottom: 16 }}>
-                <Block style={styles.divider} />
-              </Block>
-              <Block>
-                <Text bold size={28} color="#32325D">
-                  Warning Records
+          </Block>
+          <Block flex>
+            <Block middle style={styles.nameInfo}>
+              <Text bold size={28} color="#32325D">
+                {fname} {lname}
+              </Text>
+            </Block>
+            <Block middle style={styles.nameInfo}>
+              <Text size={15} color="#32325D">
+                <Text bold>Registered date:</Text> {moment(regisdate).format("DD-MM-YYYY HH:MM:ss")}
+              </Text>
+            </Block>
+            <Block middle style={{ marginTop: 30, marginBottom: 16 }}>
+              <Block style={styles.divider} />
+            </Block>
+            <Block>
+              <Text bold size={28} color="#32325D">
+                Warning Records
                     </Text>
-                <Text size={20}>
-                  total
-                  <Text color={argonTheme.COLORS.WARNING}> {this.state.notificationRecs.length} </Text>
-                  record(s)
-                </Text>
-                <Block style={{ paddingTop: 20, paddingBottom: 30 }}
-                  onLayout={(event) => {
-                    var { x, y, width, height } = event.nativeEvent.layout;
-                    listWidth = width
-                  }}
-                >
-                  {
-                    this.state.isLoading ? null :
-                      this.renderRecords()
-                  }
-                </Block>
+              {
+                this.state.searchQuery === "" ?
+                  <Text size={20}>
+                    total
+                    <Text color={argonTheme.COLORS.WARNING}> {this.state.notificationRecs.length} </Text>
+                    record(s)
+                  </Text> :
+                  <Text size={20}>
+                    searching for
+                    "<Text color={argonTheme.COLORS.WARNING}> {this.state.searchQuery} </Text>"
+                  </Text>
+              }
+
+              <Block style={{ paddingTop: 20, paddingBottom: 30 }}
+                onLayout={(event) => {
+                  var { x, y, width, height } = event.nativeEvent.layout;
+                  listWidth = width
+                }}
+              >
+                {
+                  this.state.isLoading ? null :
+                    this.renderRecords()
+                }
               </Block>
             </Block>
           </Block>
-        </ScrollView>
-      </Block >
-    );
-  }
+        </Block>
+      </ScrollView>
+    </Block >
+  );
+}
 }
 
 const styles = StyleSheet.create({

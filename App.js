@@ -160,6 +160,7 @@ export default class App extends React.Component {
     return this.state.userInfo
   }
 
+
   setHeaderHeight = (size) => {
     this.setState({
       headerHeight: size

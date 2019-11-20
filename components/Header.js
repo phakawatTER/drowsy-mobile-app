@@ -7,6 +7,7 @@ import Icon from './Icon';
 import Input from './Input';
 import Tabs from './Tabs';
 import argonTheme from '../constants/Theme';
+import Profile from '../screens/Profile';
 
 const { height, width } = Dimensions.get('window');
 const iPhoneX = () => Platform.OS === 'ios' && (height === 812 || width === 812 || height === 896 || width === 896);
@@ -40,7 +41,7 @@ const SearchButton = ({ isWhite, style, navigation }) => (
       size={16}
       family="Galio"
       name="search-zoom-in"
-      color={theme.COLORS[isWhite ? 'WHITE' : 'ICON']}
+      color={theme.COLORS[isWhite ? 'ICON' : 'ICON']}
     />
   </TouchableOpacity>
 );
@@ -89,7 +90,14 @@ class Header extends React.Component {
         ]);
       case 'Profile':
         return ([
-          // <BellButton key='chat-profile' navigation={navigation} isWhite={white} />,
+          <BellButton key='chat-profile' navigation={navigation} isWhite={white} />,
+          <SearchButton key='search-product' navigation={navigation} isWhite={white} />,
+
+          // <BasketButton key='basket-deals' navigation={navigation} isWhite={white} />
+        ]);
+      case 'History':
+        return ([
+          <BellButton key='chat-profile' navigation={navigation} isWhite={white} />,
           // <BasketButton key='basket-deals' navigation={navigation} isWhite={white} />
         ]);
       case 'Product':
@@ -112,7 +120,8 @@ class Header extends React.Component {
     }
   }
   renderSearch = () => {
-    const { navigation } = this.props;
+    const { navigation, title } = this.props;
+    console.log(this.props)
     return (
       <Input
         right
@@ -120,7 +129,11 @@ class Header extends React.Component {
         style={styles.search}
         placeholder="What are you looking for?"
         placeholderTextColor={'#8898AA'}
-        onFocus={() => navigation.navigate('Pro')}
+        onChangeText={title === "Profile" ? (text) => {
+          const profileSearch = navigation.getParam("profileSearch")
+          profileSearch(text)
+        } : () => { }}
+
         iconContent={<Icon size={16} color={theme.COLORS.MUTED} name="search-zoom-in" family="ArgonExtra" />}
       />
     );
@@ -178,11 +191,12 @@ class Header extends React.Component {
 
 
   render() {
-    const { back, title, white, transparent, bgColor, iconColor, titleColor, navigation, ...props } = this.props;
+    const { noShadow, screenProps, back, title, white, transparent, bgColor, iconColor, titleColor, navigation, ...props } = this.props;
+    console.log(screenProps)
     const { routeName } = navigation.state;
-    const noShadow = ['Search', 'Categories', 'Deals', 'Pro', 'Profile'].includes(routeName);
+    // const noShadow = ['Search', 'Categories', 'Deals', 'Pro', 'Profile'].includes(routeName);
     const headerStyles = [
-      styles.shadow,
+      !noShadow ? styles.shadow : null,
       transparent ? { backgroundColor: 'rgba(0,0,0,0)' } : null,
     ];
 
