@@ -5,7 +5,7 @@ import firebase from "firebase"
 const { height, width } = Dimensions.get('screen');
 import { Images, argonTheme } from '../constants';
 import { HeaderHeight } from "../constants/utils";
-import MapView, { AnimatedRegion, Marker } from 'react-native-maps';
+import MapView from 'react-native-maps';
 import { config } from "../firebase-config"
 
 export default class Pro extends React.Component {
@@ -15,13 +15,11 @@ export default class Pro extends React.Component {
       speed: 0,
       direction: 0,
       // location: { lat: 0, lng: 0 },// current location of user car ,
-      animated_location: new AnimatedRegion({
-        latitude: 0,
-        longitude: 0
-      }),
       location: {
-        latitude: 0,
-        longitude: 0
+        latitude: 5,
+        longitude: 5,
+        latitudeDelta:0,
+        longitudeDelta:0,
       },
       gasdata: { co: 0, lpg: 0 }
     }
@@ -56,45 +54,35 @@ export default class Pro extends React.Component {
 
         let tripDataRef = databaseRef.child(`trip/${uid}/${acctime}`).orderByKey().limitToLast(1)
         tripDataRef.on("child_added", snapshot => {
-          console.log(snapshot.val())
+          // console.log(snapshot.val())
           let tripdata = snapshot.val()
           let coordinate = tripdata.latlng // COORDINATE OF VEHICLE
           let co = tripdata.co // CO LEVEL
           let direction = tripdata.direction
           let speed = tripdata.speed
-          console.log(coordinate)
+          // console.log(coordinate)
           this.setState({
             speed,
             direction,
             location: {
               latitude: parseFloat(coordinate[0]),
               longitude: parseFloat(coordinate[1])
-            }, gasdata: { co: co },
-            animated_location: new AnimatedRegion({
-              latitude: parseFloat(coordinate[0]),
-              longitude: parseFloat(coordinate[1])
-            })
+            }, gasdata: { co: co }
           }, () => {
-            // console.log(this.state.location)
             this.updateCarMarker()
           })
         })
       })
     }).catch(err => {
-      console.log(err)
     })
   }
-
-  componentWillUnmount() {
-  }
-
 
   componentDidMount() {
     let { navigation } = this.props
     let latlng = navigation.getParam("latlng")
     let back = navigation.getParam("back")
-    let time = navigation.getParam("time")
-    // alert(JSON.stringify(latlng))
+    let time = navigation.getParam("time");
+    let direction = navigation.getParam("direction")
     this.setState({
       location: latlng ? {
         latitude: parseFloat(latlng[0]),
@@ -113,30 +101,24 @@ export default class Pro extends React.Component {
         this.markerRef.current.animateMarkerToCoordinate(nextState.location, 3200);
       } else {
         // alert(JSON.stringify(nextProps.animated_location))
-        this.state.animated_location.timing({ ...nextState.animated_location}).start()
+        // this.state.animated_location.timing({ ...nextState.animated_location}).start()
       }
     }
   }
 
   updateCarMarker = () => {
-    let { location} = this.state
+    let { location,direction} = this.state
     // this.mapRef.current.animateToCoordinate coordinate, 1000)
     let camera = {
       center: location,
-      pitch: 10
     }
-    this.mapRef.current.animateCamera(camera, { duration: 3200 })
-
+    // this.mapRef.current.animateCamera(camera)
+      this.mapRef.current.fitToCoordinates([location],2000)
   }
 
   onMapReadyDisplay = async () => {
     let { location } = this.state
-    // let region = {
-    //   latitude: parseFloat(latlng[0]),
-    //   longitude: parseFloat(latlng[1]),
-    // }
-    // console.log(latlng)
-    this.mapRef.current.animateCamera({ center: location }, { duration: 2000 })
+    this.mapRef.current.animateCamera({ center: location}, { duration: 2000 })
     setTimeout(() => {
       try {
         this.markerRef.current.showCallout()
@@ -151,18 +133,14 @@ export default class Pro extends React.Component {
     const handle = navigation.getParam("handle")
     const { time } = this.state
     const renderCarMarker = () => {
-      console.log(this.state.location)
       // alert(JSON.stringify(this.state.location))
       return (
         handle === "display" ?
-          <Marker
+          <MapView.Marker
             ref={this.markerRef}
-            title={this.props.navigation.getParam("event") == "Over CO" ?
-              "Dangerous CO level has been detected!"
-              :
-              "Driver Drowsiness has been detected!"
-            }
-            description={`Occured at: ${time}`}
+            title={"This will be event title"}
+            description={`Occured at: ${time} \n Info: asdkashld`}
+            // description={`Occured at: ${time}`}
             coordinate={this.state.location}
           >
             <Image source={Images.saloon} style={{
@@ -172,11 +150,11 @@ export default class Pro extends React.Component {
                 { rotate: `${this.state.direction}deg` }
               ]
             }} />
-          </Marker>
+          </MapView.Marker>
           :
-          <Marker.Animated
+          <MapView.Marker
             ref={this.markerRef}
-            coordinate={this.state.animated_location}
+            coordinate={this.state.location}
           >
             <Image source={Images.saloon} style={{
               width: 40,
@@ -185,7 +163,7 @@ export default class Pro extends React.Component {
                 { rotate: `${this.state.direction}deg` }
               ]
             }} />
-          </Marker.Animated>
+          </MapView.Marker>
       )
     }
 
@@ -228,20 +206,18 @@ export default class Pro extends React.Component {
             </Block>
 
             <MapView
+              maxZoonLevel={10}
+              rotateEnabled={false}
               onMapReady={() => {
                 handle == "display" ?
                   this.onMapReadyDisplay()
                   : () => { }
               }}
-              // scrollEnabled={handle == "display" ? true : false}
-              // zoomEnabled={handle == "display" ? true : false}
               ref={this.mapRef}
               style={{ ...styles.mapStyle }}
               initialRegion={{
                 latitude: 13.736717,
                 longitude: 100.523186,
-                latitudeDelta: 0.0922,
-                longitudeDelta: 0.0421,
               }}
             >
               {renderCarMarker()}

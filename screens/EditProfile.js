@@ -45,6 +45,7 @@ class EditProfile extends React.Component {
 
     componentDidMount() {
         this.getUserInfo()
+        this.getPermissionAsync()
     }
 
     getPermissionAsync = async () => {
@@ -65,6 +66,18 @@ class EditProfile extends React.Component {
         console.log(image)
         let { uri } = image
         this.setState({ profile: uri })
+    }
+
+    updateProfile=()=>{
+        let {fname ,lname,profile} = this.state
+        const update = this.props.navigation.getParam("updateUserInfo")
+        update(fname,lname,profile)
+    }
+
+    onChangeHandler = (handle,text)=>{
+        this.setState({
+            [handle]:text
+        })
     }
 
     render() {
@@ -100,6 +113,7 @@ class EditProfile extends React.Component {
                             </Block>
                         </Block>
                         <Block>
+                        <Text>Email</Text>
                             <Input
                                 editable={false}
                                 value={email}
@@ -108,9 +122,11 @@ class EditProfile extends React.Component {
                                 style={styles.inputIcons}
                             />
                         </Block>
+                        <Text>Firstname</Text>
+
                         <Block>
                             <Input
-                                editable={false}
+                                // editable={false}
                                 value={fname}
                                 onChangeText={(text) => this.onChangeHandler("fname", text)}
                                 family="ArgonExtra"
@@ -118,8 +134,10 @@ class EditProfile extends React.Component {
                             />
                         </Block>
                         <Block>
+                        <Text>Lastname</Text>
+
                             <Input
-                                editable={false}
+                                // editable={false}
                                 value={lname}
                                 onChangeText={(text) => this.onChangeHandler("lname", text)}
                                 family="ArgonExtra"
@@ -127,7 +145,7 @@ class EditProfile extends React.Component {
                             />
                         </Block>
                         <Block>
-                            <Button onPress={() => { }}>Save</Button>
+                            <Button onPress={() => {this.updateProfile()}}>Save</Button>
                         </Block>
                     </ScrollView>
                 </Block>

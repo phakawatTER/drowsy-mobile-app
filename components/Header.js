@@ -127,7 +127,9 @@ class Header extends React.Component {
         right
         color="black"
         style={styles.search}
-        placeholder="What are you looking for?"
+        placeholder={
+          title === "Profile"?"Search by occured event":"What are you looking for?"
+        }
         placeholderTextColor={'#8898AA'}
         onChangeText={title === "Profile" ? (text) => {
           const profileSearch = navigation.getParam("profileSearch")

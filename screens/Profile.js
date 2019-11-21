@@ -223,6 +223,19 @@ onScrollEnd = (e) => {
     listIndex: pageNum
   })
 }
+
+updateUserInfo =(fname,lname,profile)=>{
+  // alert("Updated")
+  let {userInfo} = this.state
+  userInfo.fname = fname,
+  userInfo.lname = lname
+  userInfo.profile = profile
+  this.setState({userInfo},()=>{
+    console.log(this.state.userInfo)
+  })
+}
+
+
 renderRecords = () => {
   let { notificationRecs, searchQuery } = this.state
   searchQuery = searchQuery.toLowerCase()
@@ -272,8 +285,10 @@ _renderItem = ({ item, dimensions }) => {
     <Block style={{ width: listWidth }} >
       {
         item.map((obj, key) => {
-          let { timestamp, event } = obj
+          let { timestamp, event,direction } = obj
+          let img = Images.iconEvent[event]
           let { timestamp: latestTimestamp } = this.state.notificationRecs[0] // TIMESTAMP OF THE LATEST EVENT
+        
           datetime = moment(timestamp).format("DD-MM-YYYY  hh:MM:ss a")
           return (
             <Animated.View
@@ -291,32 +306,51 @@ _renderItem = ({ item, dimensions }) => {
               }}
               key={`event-${key}`} >
               <Block
-                middle
-                row
+                left
                 space="evenly"
                 style={{
                   paddingVertical: 10,
                 }}
               >
-                <Text>
-                  <Text bold>{event}</Text> {datetime}
-                </Text>
-                <Button
-                  onPress={() => {
-                    // Navigate to map and send values
-                    this.props.navigation.navigate("Map", {
-                      handle: "display",
-                      time: datetime,
-                      latlng: obj.latlng, // latitude and longtitude of drowsiness
-                      back: "Profile", // location when press back
-                      event: event
-                    })
-                  }}
-                  small
-                  style={{ backgroundColor: argonTheme.COLORS.SUCCESS, paddingHorizontal: 0, paddingVertical: 0 }}
-                >
-                  Detail
-                  </Button>
+                <Block row>
+               <Text>
+                Event:
+               </Text>
+                <Text bold> {event}</Text>
+                <Image source={img} style={{width:25,height:25}} />
+                </Block>
+                <Block 
+                 left
+                 row 
+                 space="evenly"
+                 style={{width:"100%"}}
+                //  space="evenly" 
+                 >
+                      <Block>
+                      <Text>
+                      Occured date:{" "} 
+                      {datetime}
+                    </Text>
+                      </Block>
+                    <Block>
+                    <Button
+                      onPress={() => {
+                        // Navigate to map and send values
+                        this.props.navigation.navigate("Map", {
+                          handle: "display",
+                          time: datetime,
+                          latlng: obj.latlng, // latitude and longtitude of drowsiness
+                          back: "Profile", // location when press back
+                          event: event
+                        })
+                      }}
+                      small
+                      style={{ backgroundColor: argonTheme.COLORS.SUCCESS, paddingHorizontal: 0, paddingVertical: 0}}
+                    >
+                      Detail
+                      </Button>
+                    </Block>
+                </Block>
               </Block>
             </Animated.View>
           )
@@ -387,9 +421,9 @@ render() {
             >
               <Button
                 onPress={() => {
-                  // this.showModal()
                   this.props.navigation.navigate("EditProfile", {
-                    userInfo: this.state.userInfo
+                    userInfo: this.state.userInfo,
+                    updateUserInfo :this.updateUserInfo.bind(this)
                   })
                 }}
                 small
@@ -427,7 +461,7 @@ render() {
             </Block>
             <Block>
               <Text bold size={28} color="#32325D">
-                Warning Records
+                Event Records
                     </Text>
               {
                 this.state.searchQuery === "" ?
