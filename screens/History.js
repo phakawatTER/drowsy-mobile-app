@@ -64,20 +64,29 @@ class History extends React.Component {
         })
     }
 
+    // newTripListener = () => {
+    //     let tripRef = this.databaseRef.child(`usertrips/${this.state.userInfo.uid}`)
+    //     tripRef.on("child_added", snapshot => {
+    //         let { alltrips } = this.state
+    //         alltrips.push(snapshot)
+    //         this.setState({ alltrips })
+    //     })
+    // }
+
     fetchAllTrips = () => {
         let tripRef = this.databaseRef.child(`usertrips/${this.state.userInfo.uid}`)
         tripRef.once("value", snapshot => {
             let acctimes = []
             let alltrips = snapshot.val()
-            console.log("trips",alltrips)
-            Object.keys(alltrips).map(key => {
-                let acctime = alltrips[key].acctime
-                acctimes.push(acctime)
-            })
-            this.setState({ alltrips: acctimes }, () => {
-                // alert("FUCK")
-                console.log(this.state)
-            })
+            try {
+                Object.keys(alltrips).map(key => {
+                    let acctime = alltrips[key].acctime
+                    acctimes.push(acctime)
+                })
+                this.setState({ alltrips: acctimes }, () => {
+                })
+            } catch (err) { }
+
         })
     }
 
@@ -100,21 +109,23 @@ class History extends React.Component {
             let code = response.data.code
             if (code === 200) {
                 this.setState({ isLoading: false })
-
                 let triplineCoordinates = []
-                Object.keys(response.data.tripdata).map((key, index) => {
-                    // console.log(index)
-                    let latitude = response.data.tripdata[key].latlng[0] + 1 * index
-                    let longitude = response.data.tripdata[key].latlng[1]
-                    triplineCoordinates.push({
-                        latitude: latitude,
-                        longitude: longitude
+                try {
+                    Object.keys(response.data.tripdata).map((key, index) => {
+                        // console.log(index)
+                        let latitude = response.data.tripdata[key].latlng[0]
+                        let longitude = response.data.tripdata[key].latlng[1]
+                        let speed = response.data.tripdata[key].speed
+                        triplineCoordinates.push({
+                            latitude: latitude,
+                            longitude: longitude,
+                            speed
+                        })
                     })
-                })
-                this.setState({ tripData: triplineCoordinates }, () => {
-                    console.log(this.state.tripData)
-                    this.mapFitToCoordinates()
-                })
+                    this.setState({ tripData: triplineCoordinates }, () => {
+                        this.mapFitToCoordinates()
+                    })
+                } catch (err) { }
             }
         }).catch(err => {
             this.setState({ isLoading: false })
@@ -124,8 +135,15 @@ class History extends React.Component {
     }
 
     mapFitToCoordinates = () => {
-        console.log(this.state.tripData)
-        this.mapRef.current.fitToCoordinates(this.state.tripData, { animated: true })
+        this.mapRef.current.fitToCoordinates(this.state.tripData, {
+            animated: true,
+            edgePadding: {
+                top: 70,
+                bottom: 70,
+                right: 70,
+                left: 70,
+            }
+        })
     }
 
     searchTrips = () => {
@@ -138,9 +156,14 @@ class History extends React.Component {
         })
         this.setState({ intersectDate: inBetween, selectedDate: inBetween.length == 0 ? null : inBetween[0], tripData: [] }, () => {
             if (inBetween.length > 0) {
-                this.fetchTripData()
+                // this.fetchTripData()
+                this.setState({ toastBG: argonTheme.COLORS.SUCCESS }, () => {
+                    this.toastRef.current.show(`${inBetween.length} trip(s) found in this interval`, 1500);
+                })
             } else {
-                this.toastRef.current.show(`No trip matched in that interval`, 1500);
+                this.setState({ toastBG: argonTheme.COLORS.ERROR }, () => {
+                    this.toastRef.current.show(`No trip found in this interval`, 1500);
+                })
             }
         })
     }
@@ -156,8 +179,6 @@ class History extends React.Component {
                 return this.setState({ stopdate: evt });
         }
     }
-
-
 
     render() {
 
@@ -211,7 +232,11 @@ class History extends React.Component {
                 // console.log(this.state.selectedDate)
                 return (
                     <Block style={{ padding: theme.SIZES.BASE }} >
+                        <Text bold>
+                            Select a trip
+                        </Text>
                         <Picker
+                            style={{ padding: 5 }}
                             selectedValue={this.state.selectedDate}
                             onValueChange={
                                 (itemValue, itemIndex) => {
@@ -236,15 +261,62 @@ class History extends React.Component {
             }
         }
         const renderMarker = (index) => {
+            let { tripData } = this.state
+            let length = tripData.length
+            // let currentPoint = tripData[index]
             if (this.state.tripData.length > 0) {
-                console.log(this.state.tripData[index])
                 return (
                     <MapView.Marker
                         coordinate={this.state.tripData[index]}
-                    />
+                        title={index === 0 ? "Trip start" : index === length - 1 ? "Trip stop" : null}
+                        description={`Date time: 21-11-2019 06:39:43 pm`}
+                    >
+                        {
+                            index === 0 ?
+                                <Image source={Images.start} style={{ ...styles.markerStyle }} />
+
+                                : index === length - 1 ?
+                                    <Image source={Images.stop} style={{ ...styles.markerStyle, ...styles.stopMarker }} />
+                                    : null
+                        }
+                    </MapView.Marker>
                 )
             }
         }
+        const renderTripline = () => {
+            let { tripData } = this.state
+            return (
+                tripData.map((data, index) => {
+                    let current = data
+                    let coor = [current]
+                    let speed = current.speed
+                    let next = null
+                    if (index + 1 <= tripData.length - 1) {
+                        next = tripData[index + 1]
+                        speed = next.speed
+                        coor.push(next)
+                    }
+                    console.log(coor)
+                    return (
+                        <MapView.Polyline
+                            key={`polyline-${index}`}
+                            coordinates={coor}
+                            strokeWidth={6}
+                            strokeColor={
+                                speed <= 50 ?
+                                    "green"
+                                    : speed > 50 && speed <= 80 ?
+                                        "orange"
+                                        : speed > 80 ?
+                                            "red"
+                                            : null
+                            }
+                        />
+                    )
+                }))
+        }
+
+
         return (
             <Block flex style={{ ...styles.container }}>
                 <Spinner
@@ -253,7 +325,7 @@ class History extends React.Component {
                 <Toast
                     ref={this.toastRef}
                     defaultCloseDelay={1000}
-                    style={{ backgroundColor: argonTheme.COLORS.ERROR }}
+                    style={{ backgroundColor: this.state.toastBG }}
                     position={"top"}
                     positionValue={20}
                     opacity={0.9}
@@ -289,17 +361,10 @@ class History extends React.Component {
                     ref={this.mapRef}
                     style={{ ...styles.mapStyle }}
                 >
-                    {
-                        this.state.tripData.length !== 0 ?
-                            <MapView.Polyline
-                                coordinates={this.state.tripData}
-                                strokeWidth={6}
-                            />
-                            : null
-                    }
-
-
+                    {renderTripline()}
+                    {/* RENDER START MARKER */}
                     {renderMarker(0)}
+                    {/* RENDER STOP MARKER */}
                     {renderMarker(this.state.tripData.length - 1)}
                 </MapView>
             </Block>
@@ -308,6 +373,14 @@ class History extends React.Component {
 }
 
 const styles = StyleSheet.create({
+    markerStyle: {
+        width: 52.5,
+        height: 45,
+    },
+    stopMarker: {
+        marginTop: -25,
+        marginLeft: 40
+    },
     datepickerModal: {
         backgroundColor: "black",
         opacity: 0,

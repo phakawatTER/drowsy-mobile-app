@@ -67,7 +67,7 @@ class DrawerItem extends React.Component {
             color={focused ? "white" : argonTheme.COLORS.ICON}
           />
         );
-      case "Profile":
+      case "Dashboard":
         return (
           <Icon
             name="chart-pie-35"
@@ -76,6 +76,15 @@ class DrawerItem extends React.Component {
             color={focused ? "white" : argonTheme.COLORS.ICON}
           />
         );
+      // case "Profile":
+      //   return (
+      //     <Icon
+      //       name="chart-pie-35"
+      //       family="ArgonExtra"
+      //       size={12}
+      //       color={focused ? "white" : argonTheme.COLORS.ICON}
+      //     />
+      //   );
       case "History":
         return (
           <Icon
@@ -85,10 +94,10 @@ class DrawerItem extends React.Component {
             color={focused ? "white" : argonTheme.COLORS.ICON}
           />
         );
-      case "Account":
+      case "Profile":
         return (
           <Icon
-            name="calendar-date"
+            name="spaceship"
             family="ArgonExtra"
             size={12}
             color={focused ? "white" : argonTheme.COLORS.ICON}
@@ -140,6 +149,7 @@ const styles = StyleSheet.create({
   },
   activeStyle: {
     backgroundColor: argonTheme.COLORS.DEFAULT,
+    backgroundColor: "#20232a",
     borderRadius: 4
   },
   shadow: {

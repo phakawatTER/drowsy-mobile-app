@@ -11,6 +11,7 @@ import { Block } from "galio-framework";
 import Login from "../screens/Login";
 import Register from "../screens/Register";
 import History from "../screens/History"
+import Dashboard from "../screens/Dashboard"
 // screens
 import Home from "../screens/Home";
 import Onboarding from "../screens/Onboarding";
@@ -100,7 +101,7 @@ const ProfileStack = createStackNavigator(
       navigationOptions: ({ navigation }) => {
         return ({
           header: (
-            <Header title="Profile" navigation={navigation} search />
+            <Header title="Profile" navigation={navigation} search bgColor={"#20232a"} iconColor={"#fff"} titleColor={"#fff"} isWhite={true} />
           ),
           headerTransparent: true
         })
@@ -111,7 +112,7 @@ const ProfileStack = createStackNavigator(
       screen: EditProfile,
       navigationOptions: ({ navigation }) => ({
         header: (
-          <Header title="Edit Profile" navigation={navigation} />
+          <Header title="Edit Profile" navigation={navigation} bgColor={"#20232a"} iconColor={"#fff"} titleColor={"#fff"} />
         ),
         headerTransparent: true
       }),
@@ -137,7 +138,20 @@ const HistoryStack = createStackNavigator({
     screen: History,
     navigationOptions: ({ navigation }) => ({
       header: (
-        <Header title="History" navigation={navigation} noShadow />
+        <Header title="History" navigation={navigation} noShadow iconColor={"#fff"} titleColor={"#fff"} bgColor={"#20232a"} />
+      ),
+      headerTransparent: false
+    }),
+
+  }
+}, { cardStyle: { backgroundColor: "#FFFFFF" }, transitionConfig })
+
+const DashboardStack = createStackNavigator({
+  Dashboard: {
+    screen: Dashboard,
+    navigationOptions: ({ navigation }) => ({
+      header: (
+        <Header title="Dashboard" navigation={navigation}  iconColor={"#fff"} titleColor={"#fff"} bgColor={"#20232a"} />
       ),
       headerTransparent: false
     }),
@@ -205,8 +219,14 @@ const UnAuthStack = createDrawerNavigator({
 // console.log(AuthStack)
 const AuthStack = createDrawerNavigator(
   {
-
-
+    Dashboard: {
+      screen: DashboardStack,
+      navigationOptions: navOpt => ({
+        drawerLabel: ({ focused }) => (
+          <DrawerItem focused={focused} screen="Dashboard" title="Dashboard" />
+        )
+      })
+    },
     Profile: {
       screen: ProfileStack,
       navigationOptions: navOpt => ({
@@ -226,14 +246,16 @@ const AuthStack = createDrawerNavigator(
 
 
 
-    Elements: {
-      screen: ElementsStack,
-      navigationOptions: navOpt => ({
-        drawerLabel: ({ focused }) => (
-          <DrawerItem focused={focused} screen="Elements" title="Elements" />
-        )
-      })
-    },
+
+
+    // Elements: {
+    //   screen: ElementsStack,
+    //   navigationOptions: navOpt => ({
+    //     drawerLabel: ({ focused }) => (
+    //       <DrawerItem focused={focused} screen="Elements" title="Elements" />
+    //     )
+    //   })
+    // },
     // Articles: {
     //   screen: ArticlesStack,
     //   navigationOptions: navOpt => ({

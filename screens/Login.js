@@ -29,7 +29,7 @@ class Login extends React.Component {
     getUserInfo = async () => {
         let userInfo = await AsyncStorage.getItem("userInfo")
         userInfo = JSON.parse(userInfo)
-        if (userInfo) this.props.navigation.navigate("Profile")
+        if (userInfo) this.props.navigation.navigate("Dashboard")
 
     }
 
@@ -61,7 +61,6 @@ class Login extends React.Component {
                 if (response.status == 200) {
                     let data = response.data
                     let { code } = data
-                    console.log("FUCK", data.userInfo)
                     if (code === 200) {
                         this.storeUserInfo(JSON.stringify(data.userInfo))
                         this.props.screenProps.setUserInfo(data.userInfo)
@@ -69,7 +68,7 @@ class Login extends React.Component {
                             emailState: "success",
                             passwordState: "success"
                         })
-                        this.props.navigation.navigate("Profile")
+                        this.props.navigation.navigate("Dashboard")
                     } else {
                         this.setState({
                             emailState: "danger",

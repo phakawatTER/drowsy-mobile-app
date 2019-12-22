@@ -18,8 +18,8 @@ export default class Pro extends React.Component {
       location: {
         latitude: 5,
         longitude: 5,
-        latitudeDelta:0,
-        longitudeDelta:0,
+        latitudeDelta: 0,
+        longitudeDelta: 0,
       },
       gasdata: { co: 0, lpg: 0 }
     }
@@ -46,6 +46,7 @@ export default class Pro extends React.Component {
       let latestTrip = databaseRef.child(`trip/${uid}`)
       latestTrip.on("value", snapshot => {
         trip = snapshot.val()
+        if (!trip) return
         acctime = null
         Object.keys(trip).map(key => {
           acctime = key
@@ -55,7 +56,9 @@ export default class Pro extends React.Component {
         let tripDataRef = databaseRef.child(`trip/${uid}/${acctime}`).orderByKey().limitToLast(1)
         tripDataRef.on("child_added", snapshot => {
           // console.log(snapshot.val())
+
           let tripdata = snapshot.val()
+          if (!tripdata) return
           let coordinate = tripdata.latlng // COORDINATE OF VEHICLE
           let co = tripdata.co // CO LEVEL
           let direction = tripdata.direction
@@ -81,9 +84,14 @@ export default class Pro extends React.Component {
     let { navigation } = this.props
     let latlng = navigation.getParam("latlng")
     let back = navigation.getParam("back")
-    let time = navigation.getParam("time");
+    let time = navigation.getParam("time")
+    let event = navigation.getParam("event")
+    let speed = navigation.getParam("speed")
     let direction = navigation.getParam("direction")
     this.setState({
+      speed,
+      event,
+      direction,
       location: latlng ? {
         latitude: parseFloat(latlng[0]),
         longitude: parseFloat(latlng[1])
@@ -107,18 +115,18 @@ export default class Pro extends React.Component {
   }
 
   updateCarMarker = () => {
-    let { location,direction} = this.state
+    let { location, direction } = this.state
     // this.mapRef.current.animateToCoordinate coordinate, 1000)
     let camera = {
       center: location,
     }
     // this.mapRef.current.animateCamera(camera)
-      this.mapRef.current.fitToCoordinates([location],2000)
+    this.mapRef.current.fitToCoordinates([location], 2000)
   }
 
   onMapReadyDisplay = async () => {
     let { location } = this.state
-    this.mapRef.current.animateCamera({ center: location}, { duration: 2000 })
+    this.mapRef.current.animateCamera({ center: location }, { duration: 2000 })
     setTimeout(() => {
       try {
         this.markerRef.current.showCallout()
@@ -131,15 +139,15 @@ export default class Pro extends React.Component {
   render() {
     const { navigation } = this.props;
     const handle = navigation.getParam("handle")
-    const { time } = this.state
+    const { time, event } = this.state
     const renderCarMarker = () => {
       // alert(JSON.stringify(this.state.location))
       return (
         handle === "display" ?
           <MapView.Marker
             ref={this.markerRef}
-            title={"This will be event title"}
-            description={`Occured at: ${time} \n Info: asdkashld`}
+            title={event}
+            description={`Occured at: ${time}`}
             // description={`Occured at: ${time}`}
             coordinate={this.state.location}
           >
@@ -198,7 +206,7 @@ export default class Pro extends React.Component {
                       Occured at {this.props.navigation.getParam("time")}
                     </Text>
                     <Text color={"#FFFFFF"} bold>
-                      Current Speed :0 km/h
+                      Current Speed :{parseFloat(this.state.speed).toFixed(2)} km/h
                   </Text>
                   </Block>
               }
@@ -225,7 +233,7 @@ export default class Pro extends React.Component {
             <Button
               shadowless
               style={styles.button}
-              color={argonTheme.COLORS.DEFAULT}
+              color={"#20232a"}
               onPress={() => navigation.navigate(this.state.back)}>
               <Text bold color={theme.COLORS.WHITE}>Go Back</Text>
             </Button>
@@ -263,7 +271,7 @@ const styles = StyleSheet.create({
     zIndex: 2
   },
   container: {
-    backgroundColor: argonTheme.COLORS.DEFAULT,
+    backgroundColor: "#20232a",
     marginTop: Platform.OS === 'android' ? -HeaderHeight : 0,
   },
   padded: {

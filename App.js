@@ -42,12 +42,14 @@ export default class App extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
-      userInfo: null
+      userInfo: null,
+      notifications: []
     }
     this.setHeaderHeight = this.setHeaderHeight.bind(this)
     this.getHeaderHeight = this.getHeaderHeight.bind(this)
     this.setUserInfo = this.setUserInfo.bind(this)
     this.getUserInfo = this.getUserInfo.bind(this)
+    this.addNewNotification = this.addNewNotification.bind(this)
     this.screenRef = React.createRef()
 
     try {
@@ -55,6 +57,12 @@ export default class App extends React.Component {
     } catch (err) {
       console.log(err)
     }
+  }
+
+  addNewNotification = (notification) => {
+    let { notifications } = this.state
+    notifications.push(notification)
+    this.setState({ notifications })
   }
 
   registerForPushNotification = async () => {
@@ -195,7 +203,8 @@ export default class App extends React.Component {
                 setUserInfo: this.setUserInfo,
                 getUserInfo: this.getUserInfo,
                 setHeaderHeight: this.setHeaderHeight,
-                getHeaderHeight: this.getHeaderHeight
+                getHeaderHeight: this.getHeaderHeight,
+                addNewNotification: this.addNewNotification
               }}
             />
           </Block>

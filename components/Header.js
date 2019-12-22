@@ -18,7 +18,8 @@ const BellButton = ({ isWhite, style, navigation }) => (
       family="ArgonExtra"
       size={16}
       name="bell"
-      color={argonTheme.COLORS[isWhite ? 'WHITE' : 'ICON']}
+      // color={argonTheme.COLORS[isWhite ? 'WHITE' : 'ICON']}
+      color={argonTheme.COLORS["WHITE"]}
     />
     <Block middle style={styles.notify} />
   </TouchableOpacity>
@@ -91,13 +92,20 @@ class Header extends React.Component {
       case 'Profile':
         return ([
           <BellButton key='chat-profile' navigation={navigation} isWhite={white} />,
-          <SearchButton key='search-product' navigation={navigation} isWhite={white} />,
+          // <SearchButton key='search-product' navigation={navigation} isWhite={white} />,
+
+          // <BasketButton key='basket-deals' navigation={navigation} isWhite={white} />
+        ]);
+        case 'Dashboard':
+        return ([
+          <BellButton key='chat-dashboard' navigation={navigation} isWhite={white} />,
+          // <SearchButton key='search-product' navigation={navigation} isWhite={white} />,
 
           // <BasketButton key='basket-deals' navigation={navigation} isWhite={white} />
         ]);
       case 'History':
         return ([
-          <BellButton key='chat-profile' navigation={navigation} isWhite={white} />,
+          <BellButton key='chat-history' navigation={navigation} isWhite={white} />,
           // <BasketButton key='basket-deals' navigation={navigation} isWhite={white} />
         ]);
       case 'Product':
@@ -128,7 +136,7 @@ class Header extends React.Component {
         color="black"
         style={styles.search}
         placeholder={
-          title === "Profile"?"Search by occured event":"What are you looking for?"
+          title === "Profile"?"Search occured event":"What are you looking for?"
         }
         placeholderTextColor={'#8898AA'}
         onChangeText={title === "Profile" ? (text) => {

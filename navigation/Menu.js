@@ -44,7 +44,7 @@ renderSignOutButton = (props) => {
             signOut(props)
           }}
           bold
-          color={argonTheme.COLORS.WARNING}
+          color={argonTheme.COLORS.ERROR}
           size={15}
         >
           Sign out
@@ -63,10 +63,10 @@ const Drawer = props => {
     <Block style={styles.container} forceInset={{ top: 'always', horizontal: 'never' }}>
       <Block flex>
         <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
-          <Block flex={0.05} style={styles.header}>
-            <Text bold size={20}>
-              Drowsy นะจ๊ะ
-        </Text>
+          <Block flex={0.05} style={styles.header} row>
+            {/* <Logo /> */}
+            <Image source={Images.appLogo} style={{ width: 27.5, height: 27.5 }} />
+            <Text bold size={20}> Drowsy Detection App</Text>
           </Block>
           <DrawerItems {...props} />
           <Block flex row style={styles.defaultStyle}>
