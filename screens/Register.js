@@ -12,7 +12,8 @@ import { API_REGISTER } from "../link.js"
 import axios from "axios";
 import { Button, Icon, Input } from "../components";
 import { Images, argonTheme } from "../constants";
-
+import { PWD_SECRET } from "../constants/pwd"
+import { sha512 } from "js-sha512";
 const { width, height } = Dimensions.get("screen");
 
 class Register extends React.Component {
@@ -158,7 +159,7 @@ class Register extends React.Component {
         lname: lname,
         email: email,
         mobile: mobile,
-        password: password
+        password: sha512(`${password}${PWD_SECRET}`)
       }
       axios.post(API_REGISTER, payload)
         .then(response => {

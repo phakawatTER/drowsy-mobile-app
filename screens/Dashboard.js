@@ -162,7 +162,6 @@ class Profile extends React.Component {
                             if (!(event in eventGroup)) eventGroup[event] = 1
                             else eventGroup[event] += 1
                         })
-                        console.log("this is event group", eventGroup)
                         this.setState({
                             eventGroup,
                             notificationRecs: result,
@@ -218,10 +217,11 @@ class Profile extends React.Component {
                     } else {
                     }
                 }).catch(err => {
+                    this.setState({ isLoading: false })
                     console.log(err)
                 })
         }).catch(err => {
-            console.log(err)
+            this.setState({ isLoading: false })
         })
     }
 
@@ -361,32 +361,36 @@ class Profile extends React.Component {
                         </Block>
                     </Block>
 
-                    <Block flex style={{ ...styles.profileCard }}>
-                        <Block flex>
+                    {
+                        Object.keys(todayEventGroup).length !== 0 ?
+                            <Block flex style={{ ...styles.profileCard }}>
+                                <Block flex>
 
-                            <Block>
-                                <Text bold size={28} color="#32325D">Today Records</Text>
+                                    <Block>
+                                        <Text bold size={28} color="#32325D">Today Records</Text>
 
-                                <Text size={20}>
-                                    total<Text color={argonTheme.COLORS.WARNING}> {todayRecs.length} </Text>
-                                    record(s)
+                                        <Text size={20}>
+                                            total<Text color={argonTheme.COLORS.WARNING}> {todayRecs.length} </Text>
+                                            record(s)
                         </Text>
-                                {/* GRAPH WILL BE PUT HERE */}
-                                <Block >
-                                    {renderPieChart(todayEventGroup)}
-                                    <Block flex>
-                                        {renderPieChartList(todayEventGroup)}
+                                        {/* GRAPH WILL BE PUT HERE */}
+                                        <Block >
+                                            {renderPieChart(todayEventGroup)}
+                                            <Block flex>
+                                                {renderPieChartList(todayEventGroup)}
+                                            </Block>
+
+                                        </Block>
+
+
                                     </Block>
-
+                                    <Block middle style={{ marginTop: 30, marginBottom: 16 }}>
+                                        <Block style={styles.divider} />
+                                    </Block>
                                 </Block>
-
-
                             </Block>
-                            <Block middle style={{ marginTop: 30, marginBottom: 16 }}>
-                                <Block style={styles.divider} />
-                            </Block>
-                        </Block>
-                    </Block>
+                            : null
+                    }
 
                 </ScrollView>
             </Block >

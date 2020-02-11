@@ -30,9 +30,9 @@ export default class Pro extends React.Component {
     this.onMapReadyDisplay = this.onMapReadyDisplay.bind(this)
     try {
       firebase.initializeApp(config)
-    } catch (err) {
-      // console.log(err)
-    }
+    } catch (err) { }
+    this.databaseRef = firebase.database().ref()
+
   }
   loadUserInfo = async () => {
     let userInfo = AsyncStorage.getItem("userInfo").then(data => {
@@ -42,21 +42,16 @@ export default class Pro extends React.Component {
       let { uid } = userInfo
       this.setState({ userInfo })
       if (handle !== "tracking") return
-      let databaseRef = firebase.database().ref()
-      let latestTrip = databaseRef.child(`trip/${uid}`)
-      latestTrip.on("value", snapshot => {
+      this.latestTrip = this.databaseRef.child(`trip/${uid}`)
+      this.latestTrip.on("value", snapshot => {
         trip = snapshot.val()
         if (!trip) return
         acctime = null
         Object.keys(trip).map(key => {
           acctime = key
         })
-
-
-        let tripDataRef = databaseRef.child(`trip/${uid}/${acctime}`).orderByKey().limitToLast(1)
-        tripDataRef.on("child_added", snapshot => {
-          // console.log(snapshot.val())
-
+        this.tripDataRef = this.databaseRef.child(`trip/${uid}/${acctime}`).orderByKey().limitToLast(1)
+        this.tripDataRef.on("child_added", snapshot => {
           let tripdata = snapshot.val()
           if (!tripdata) return
           let coordinate = tripdata.latlng // COORDINATE OF VEHICLE
@@ -100,6 +95,14 @@ export default class Pro extends React.Component {
       time: time
     })
     this.loadUserInfo()
+  }
+
+  componentWillUnmount() {
+    try {
+      this.tripDataRef.off("child_added")
+      this.latestTrip.off("value")
+    }
+    catch (err) { }
   }
 
   componentWillUpdate(nextProps, nextState) {

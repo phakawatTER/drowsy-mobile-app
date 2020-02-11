@@ -14,13 +14,14 @@ import {
   TouchableHighlight
 
 } from "react-native";
+import resolveAssetSource from "resolveAssetSource"
 import Spinner from "react-native-loading-spinner-overlay"
 import { Block, Text, theme } from "galio-framework";
 import { Button } from "../components";
 import { Images, argonTheme } from "../constants";
 import { HeaderHeight } from "../constants/utils";
 import { AsyncStorage } from "react-native";
-import { API_GET_NOTIFICATION_RECORD } from "../link"
+import { API_GET_NOTIFICATION_RECORD, SOCKET_ENDPOINT } from "../link"
 import axios from "axios"
 import moment from "moment"
 import firebase from "firebase"
@@ -38,6 +39,8 @@ class Profile extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
+      isLive: false,
+      liveVDO: false,
       searchQuery: "",
       fadeOut: new Animated.Value(0),
       modalVisible: false,
@@ -55,6 +58,8 @@ class Profile extends React.Component {
         email: ""
       }
     }
+
+    this.s = null
     this.modalRef = React.createRef()
     this.listRef = React.createRef()
     this.toastRef = React.createRef()
@@ -76,17 +81,40 @@ class Profile extends React.Component {
 
   }
 
-  loadUserInfo = async () => {
+  connectToImageSocket = async () => {
+    this.s = require("socket.io-client")(SOCKET_ENDPOINT)
     let userInfo = await AsyncStorage.getItem("userInfo")
     userInfo = JSON.parse(userInfo)
-    this.setState({ userInfo: userInfo }, () => {
+    let { uid } = userInfo
+    this.s.on("connect", () => {
+      console.log("connected to ter's socket")
     })
+    this.s.on(`image_${uid}`, (data) => {
+      let stream_image = `data:image/jpeg;base64,${data}`
+      try {
+        clearTimeout(this.image_timer)
+      } catch (err) { }
+      try {
+        if (!this.state.isLive)
+          this.setState({ isLive: true })
+        this.refs.streamVDO.setNativeProps({
+          source: [{ uri: stream_image }]
+        });
+        this.image_timer = setTimeout(() => {
+          this.setState({ isLive: false })
+          this.refs.streamVDO.setNativeProps({
+            source: []
+          });
+        }, 2000)
+      } catch (err) { }
+
+    })
+    this.s.on("disconnect", () => {
+      console.log("disconnected from ter's socket")
+    })
+    this.setState({ userInfo: userInfo })
   }
 
-  componentWillMount() {
-    this.loadUserInfo()
-    this.getNotificationRecord()
-  }
 
 
   componentWillReceiveProps(nextProps) {
@@ -97,20 +125,19 @@ class Profile extends React.Component {
     }
   }
 
-  componentDidMount() {
+  componentWillMount() {
     const { navigation } = this.props;
     this.props.navigation.setParams({
       profileSearch: this.searchEvent
     })
     this.focusListener = navigation.addListener('didFocus', () => {
       const { notificationRecs } = this.state
-      if (notificationRecs.length === 0) {
-        this.getNotificationRecord()
-      }
+      this.connectToImageSocket()
+      this.getNotificationRecord()
     });
     this.leaveListener = navigation.addListener('didBlur', () => {
       this.setState({ searchQuery: "" })
-
+      this.s.disconnect()
     })
   }
 
@@ -203,7 +230,7 @@ class Profile extends React.Component {
                     let data = snapshot.val()
                     // show toast
                     let { timestamp } = data
-                    timestamp = moment(timestamp).format("DD-MM-YYYY HH:MM:ss a")
+                    timestamp = moment(timestamp).format("DD-MM-YYYY HH:mm:ss a")
                     this.toastRef.current.show(`Driver Drowsiness Detected! ${timestamp} `, 1500, () => {
                       this.setState({ modalVisible: false })
                     });
@@ -216,9 +243,11 @@ class Profile extends React.Component {
             // console.log(code)
           }
         }).catch(err => {
+          this.setState({ isLoading: false })
           console.log(err)
         })
     }).catch(err => {
+      this.setState({ isLoading: false })
       console.log(err)
     })
   }
@@ -309,7 +338,7 @@ class Profile extends React.Component {
                   paddingVertical: 0,
                   borderRadius: 5,
                   ...read === false ? { backgroundColor: "#20232a" } : {}
-                 
+
                 }}
                 key={`event-${key}`} >
                 <Block
@@ -372,40 +401,77 @@ class Profile extends React.Component {
 
   render() {
     const { fname, lname, profile, regisdate } = this.state.userInfo
+    const { stream_image, liveVDO, isLive } = this.state
+    const liveVideoModal = () => (
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={liveVDO}
+      >
+        <TouchableHighlight
+          onPress={() => this.setState({ liveVDO: !liveVDO })}
+        >
+          <View style={{ ...styles.dimmer }} >
+            <Block
+              style={{ width: "100%", height: 300, backgroundColor: "black", position: "relative" }}
+              middle
+              space="evenly">
+              <Image
+                ref={"streamVDO"}
+                style={{ width: "100%", height: "100%" }}
+              />
+              <Block style={{ ...styles.liveLogo, ...{ backgroundColor: isLive ? "crimson" : "grey" } }}>
+                <Text bold color={"white"}>
+                  Live
+                </Text>
+              </Block>
+            </Block>
+          </View>
+        </TouchableHighlight>
+      </Modal >
+    )
+
+    const notificationModal = () => (
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={this.state.modalVisible}
+        onRequestClose={() => {
+          Alert.alert('Modal has been closed.');
+        }}>
+        <View style={{ ...styles.dimmer }} >
+          <Toast
+            onPress={() => {
+              let latestDrowsy = this.state.notificationRecs[0]
+              let { latlng, timestamp } = latestDrowsy
+              datetime = moment(timestamp).format("DD-MM-YYYY HH:MM:ss")
+              this.props.navigation.navigate("Map", {
+                handle: "display",
+                time: datetime,
+                latlng: latlng,
+                back: "Profile"
+              })
+            }}
+            ref={this.toastRef}
+            defaultCloseDelay={1500}
+            style={{ backgroundColor: argonTheme.COLORS.ERROR }}
+            position={"top"}
+            positionValue={this.state.headerHeight - 10}
+            opacity={0.9} />
+        </View>
+      </Modal>
+    )
+
+
     return (
       <Block flex >
         <Spinner
           visible={this.state.isLoading}
           textStyle={styles.spinnerTextStyle}
         />
-        <Modal
-          animationType="fade"
-          transparent={true}
-          visible={this.state.modalVisible}
-          onRequestClose={() => {
-            Alert.alert('Modal has been closed.');
-          }}>
-          <View style={{ ...styles.dimmer }} >
-            <Toast
-              onPress={() => {
-                let latestDrowsy = this.state.notificationRecs[0]
-                let { latlng, timestamp } = latestDrowsy
-                datetime = moment(timestamp).format("DD-MM-YYYY HH:MM:ss")
-                this.props.navigation.navigate("Map", {
-                  handle: "display",
-                  time: datetime,
-                  latlng: latlng,
-                  back: "Profile"
-                })
-              }}
-              ref={this.toastRef}
-              defaultCloseDelay={1500}
-              style={{ backgroundColor: argonTheme.COLORS.ERROR }}
-              position={"top"}
-              positionValue={this.state.headerHeight - 10}
-              opacity={0.9} />
-          </View>
-        </Modal>
+        {liveVideoModal()}
+        {notificationModal()}
+
         <ScrollView
           vertical={true}
           showsVerticalScrollIndicator={false}
@@ -452,8 +518,19 @@ class Profile extends React.Component {
                 >
                   Tracking
                     </Button>
+                <Button
+                  small
+                  style={{ backgroundColor: isLive ? "crimson" : "grey" }}
+                  onPress={() => {
+                    if (!isLive) return
+                    this.setState({ liveVDO: !this.state.liveVDO })
+                  }}
+                >LIVE</Button>
               </Block>
+
+
             </Block>
+
             <Block flex>
               <Block middle style={styles.nameInfo}>
                 <Text bold size={28} color="#32325D">
@@ -506,6 +583,14 @@ class Profile extends React.Component {
 }
 
 const styles = StyleSheet.create({
+  liveLogo: {
+    backgroundColor: "crimson",
+    position: "absolute",
+    top: 10,
+    left: 2.5,
+    padding: 5,
+    borderRadius: 2.5
+  },
   dimmer: {
     backgroundColor: "rgba(0,0,0,0.5)",
     minWidth: width,

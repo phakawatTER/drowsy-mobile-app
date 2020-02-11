@@ -13,6 +13,8 @@ import { Button, Icon, Input } from "../components";
 import { Images, argonTheme } from "../constants";
 import { API_LOGIN } from "../link"
 import { AsyncStorage } from "react-native"
+import { PWD_SECRET } from "../constants/pwd"
+import { sha512 } from "js-sha512"
 const { width, height } = Dimensions.get("screen");
 
 class Login extends React.Component {
@@ -53,7 +55,7 @@ class Login extends React.Component {
         let { email, password } = this.state
         let payload = {
             username: email,
-            password: password,
+            password: sha512(`${password}${PWD_SECRET}`),
             from: "app"
         }
         axios.post(API_LOGIN, payload)
@@ -209,7 +211,7 @@ const styles = StyleSheet.create({
         overflow: "hidden"
     },
     socialConnect: {
-        fontWeight:"bold"
+        fontWeight: "bold"
         // backgroundColor: argonTheme.COLORS.WHITE,
         // borderBottomWidth: StyleSheet.hairlineWidth,
         // borderColor: "#8898AA"
