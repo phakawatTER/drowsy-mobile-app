@@ -2,6 +2,7 @@ import React from "react";
 import { StyleSheet } from "react-native";
 import { Block, Text, theme } from "galio-framework";
 import Icon from "./Icon";
+import { MaterialCommunityIcons } from "@expo/vector-icons"
 import argonTheme from "../constants/Theme";
 import { AsyncStorage } from "react-native"
 
@@ -96,12 +97,17 @@ class DrawerItem extends React.Component {
         );
       case "Profile":
         return (
-          <Icon
-            name="spaceship"
-            family="ArgonExtra"
-            size={12}
+          <MaterialCommunityIcons
+            name="face-profile"
+            size={17.5}
             color={focused ? "white" : argonTheme.COLORS.ICON}
           />
+          // <Icon
+          //   name="spaceship"
+          //   family="ArgonExtra"
+          //   size={12}
+          //   color={focused ? "white" : argonTheme.COLORS.ICON}
+          // />
         );
       case "Getting Started":
         return <Icon />;

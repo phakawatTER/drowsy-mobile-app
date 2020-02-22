@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image } from 'react-native';
+import { Image, Modal } from 'react-native';
 import { AppLoading } from 'expo';
 import { Asset } from 'expo-asset';
 import { Block, GalioProvider } from 'galio-framework';
@@ -12,8 +12,11 @@ import { Notifications } from 'expo';
 import * as Permissions from 'expo-permissions';
 import { API_LOGOUT } from "./link"
 import axios from "axios"
+import { Audio } from "expo-av"
 import { Platform, Switch } from "react-native"
-
+import DropdownAlert from 'react-native-dropdownalert';
+let event_count = 0
+let trip_count = 0
 // cache app images
 const assetImages = [
   Images.Onboarding,
@@ -66,7 +69,6 @@ export default class App extends React.Component {
   }
 
   registerForPushNotification = async () => {
-    console.log("userInfo", this.state.userInfo)
     const { uid } = this.state.userInfo
     const expoPushToken = this.state.userInfo.expoPushToken
     const { status: existingStatus } = await Permissions.getAsync(Permissions.NOTIFICATIONS)
@@ -80,6 +82,7 @@ export default class App extends React.Component {
       return
     }
     let token = await Notifications.getExpoPushTokenAsync()
+    console.log(token)
     // update push token to this user
     if (expoPushToken !== token) {
       firebase.database().ref().child("user").child(uid).update({
@@ -150,6 +153,49 @@ export default class App extends React.Component {
       // if user info exists
       if (this.state.userInfo) {
         this.registerForPushNotification()
+        let { uid } = this.state.userInfo
+        this.databaseRef = firebase.database().ref()
+        this.notificationRef = this.databaseRef.child("notification").child(uid).limitToLast(1)
+        this.tripRef = this.databaseRef.child(`usertrips/${uid}`).limitToLast(1)
+        this.tripRef.on("child_added", (snapshot) => {
+          if (trip_count == 0) {
+            trip_count += 1
+            return
+          }
+          this.dropDownAlertRef.alertWithType('success', 'Trip alert!', `New trip has started !!`);
+
+        })
+        // child_added listener
+        this.notificationRef.on("child_added", (snapshot) => {
+          if (event_count == 0) {
+            event_count += 1
+            return
+          }
+          let { event, timestamp } = snapshot.val()
+          // if new child added to the collection so update it 
+          try {
+            if (event == "Drowsy") {
+              this.dropDownAlertRef.alertWithType('error', 'Event alert!', `Event "${event}" detected !!`);
+              // play alarm sound
+              const soundObject = new Audio.Sound();
+              try {
+                soundObject.loadAsync(require('./assets/audio/alarm.mp3')).then(response => {
+                  soundObject.playAsync();
+                  setTimeout(() => {
+                    soundObject.stopAsync()
+                  }, 2000)
+                })
+              } catch (err) {
+                console.log(err)
+              }
+            } else {
+              this.dropDownAlertRef.alertWithType('warn', 'Event alert!', `Event "${event}" detected !!`);
+            }
+          } catch (err) {
+          }
+        })
+      } else {
+        this.notificationRef.off("child_added")
       }
     }
   }
@@ -195,6 +241,7 @@ export default class App extends React.Component {
     } else {
       return (
         <GalioProvider theme={argonTheme}>
+
           <Block flex>
             <Screens
               ref={this.screenRef}
@@ -208,6 +255,10 @@ export default class App extends React.Component {
               }}
             />
           </Block>
+          <DropdownAlert
+            // zIndex={100000000000000000000000000000000000000000}
+            ref={ref => { this.dropDownAlertRef = ref }}
+          />
         </GalioProvider>
       );
     }

@@ -9,7 +9,8 @@ const ArgonLogo = require("../assets/imgs/argonlogo.png");
 const iOSLogo = require("../assets/imgs/ios.png");
 const androidLogo = require("../assets/imgs/android.png");
 const defaultAvatar = require("../assets/imgs/default-avatar.png");
-const saloon = require("../assets/imgs/icon/saloon-online.png");
+const saloon_online = require("../assets/imgs/icon/saloon-online.png");
+const saloon_offline = require("../assets/imgs/icon/saloon-offline.png");
 const stop = require("../assets/imgs/icon/stop.png")
 const start = require("../assets/imgs/icon/start.png")
 const appLogo = require("../assets/imgs/app-logo.png")
@@ -77,7 +78,8 @@ export default {
   start,
   stop,
   iconEvent,
-  saloon,
+  saloon_online,
+  saloon_offline,
   defaultAvatar,
   Onboarding,
   Logo,

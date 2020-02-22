@@ -27,7 +27,6 @@ import axios from "axios"
 import moment from "moment"
 import firebase from "firebase"
 import { config } from "../firebase-config"
-import { Audio } from 'expo-av';
 import Toast, { DURATION } from 'react-native-easy-toast'
 import { PieChart } from 'react-native-svg-charts'
 import 'react-native-svg';
@@ -191,26 +190,11 @@ class Profile extends React.Component {
                                         notificationRecs: this.state.notificationRecs,
                                         modalVisible: true
                                     }, () => {
-                                        let data = snapshot.val()
                                         // show toast
-                                        let { timestamp } = data
+                                        let { timestamp, event } = snapshot.val()
                                         timestamp = moment(timestamp).format("DD-MM-YYYY HH:MM:ss a")
-                                        this.toastRef.current.show(`Driver Drowsiness Detected! ${timestamp} `, 1500, () => {
-                                            this.setState({ modalVisible: false })
-                                        });
                                     })
-                                    // play alarm sound
-                                    const soundObject = new Audio.Sound();
-                                    try {
-                                        soundObject.loadAsync(require('../assets/audio/alarm.mp3')).then(response => {
-                                            soundObject.playAsync();
-                                            setTimeout(() => {
-                                                soundObject.stopAsync()
-                                            }, 2000)
-                                        })
-                                    } catch (err) {
-                                        console.log(err)
-                                    }
+
                                 }
                             })
                         })
@@ -299,7 +283,7 @@ class Profile extends React.Component {
                     visible={this.state.isLoading}
                     textStyle={styles.spinnerTextStyle}
                 />
-                <Modal
+                {/* <Modal
                     animationType="fade"
                     transparent={true}
                     visible={this.state.modalVisible}
@@ -321,12 +305,12 @@ class Profile extends React.Component {
                             }}
                             ref={this.toastRef}
                             defaultCloseDelay={1500}
-                            style={{ backgroundColor: argonTheme.COLORS.ERROR }}
+                            style={{ backgroundColor: argonTheme.COLORS.ERROR, color: "white" }}
                             position={"top"}
                             positionValue={this.state.headerHeight - 10}
                             opacity={0.9} />
                     </View>
-                </Modal>
+                </Modal> */}
                 <ScrollView
                     vertical={true}
                     showsVerticalScrollIndicator={false}

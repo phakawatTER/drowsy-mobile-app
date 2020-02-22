@@ -7,6 +7,7 @@ import { Images, argonTheme } from '../constants';
 import { HeaderHeight } from "../constants/utils";
 import MapView from 'react-native-maps';
 import { config } from "../firebase-config"
+import { SOCKET_ENDPOINT } from "../link"
 
 export default class Pro extends React.Component {
   constructor(props) {
@@ -14,7 +15,7 @@ export default class Pro extends React.Component {
     this.state = {
       speed: 0,
       direction: 0,
-      // location: { lat: 0, lng: 0 },// current location of user car ,
+      status: "offline",
       location: {
         latitude: 5,
         longitude: 5,
@@ -33,6 +34,7 @@ export default class Pro extends React.Component {
     } catch (err) { }
     this.databaseRef = firebase.database().ref()
 
+
   }
   loadUserInfo = async () => {
     let userInfo = AsyncStorage.getItem("userInfo").then(data => {
@@ -42,8 +44,40 @@ export default class Pro extends React.Component {
       let { uid } = userInfo
       this.setState({ userInfo })
       if (handle !== "tracking") return
+      this.server_socket = require("socket.io-client")(SOCKET_ENDPOINT)
+      this.server_socket.on("connect", () => {
+        console.log("MAP SOCKET CONNECTED")
+      })
+      this.server_socket.on("disconnect", () => {
+        console.log("MAP SOCKET DISCONNECTED")
+      })
+      this.server_socket.on(`trip_update_${uid}`, (tripdata) => {
+        console.log("THIS IS UPDATE DATA", tripdata)
+        let coordinate = tripdata.latlng // COORDINATE OF VEHICLE
+        let co = tripdata.co // CO LEVEL
+        let direction = tripdata.direction
+        let speed = tripdata.speed
+        try {
+          clearTimeout(this.offlineTimer)
+        } catch (err) { }
+        this.offlineTimer = setTimeout(() => {
+          this.setState({ speed: 0, status: "offline" })
+        }, 5000)
+        // console.log(coordinate)
+        this.setState({
+          status: "online",
+          speed,
+          direction,
+          location: {
+            latitude: parseFloat(coordinate[0]),
+            longitude: parseFloat(coordinate[1])
+          }, gasdata: { co: co }
+        }, () => {
+          this.updateCarMarker()
+        })
+      })
       this.latestTrip = this.databaseRef.child(`trip/${uid}`)
-      this.latestTrip.on("value", snapshot => {
+      this.latestTrip.once("value", snapshot => {
         trip = snapshot.val()
         if (!trip) return
         acctime = null
@@ -51,21 +85,20 @@ export default class Pro extends React.Component {
           acctime = key
         })
         this.tripDataRef = this.databaseRef.child(`trip/${uid}/${acctime}`).orderByKey().limitToLast(1)
-        this.tripDataRef.on("child_added", snapshot => {
+        this.tripDataRef.once("child_added", snapshot => {
           let tripdata = snapshot.val()
-          if (!tripdata) return
+          console.log(tripdata)
           let coordinate = tripdata.latlng // COORDINATE OF VEHICLE
           let co = tripdata.co // CO LEVEL
           let direction = tripdata.direction
           let speed = tripdata.speed
           // console.log(coordinate)
           this.setState({
-            speed,
             direction,
             location: {
               latitude: parseFloat(coordinate[0]),
               longitude: parseFloat(coordinate[1])
-            }, gasdata: { co: co }
+            },
           }, () => {
             this.updateCarMarker()
           })
@@ -84,7 +117,7 @@ export default class Pro extends React.Component {
     let speed = navigation.getParam("speed")
     let direction = navigation.getParam("direction")
     this.setState({
-      speed,
+      speed: speed ? speed : this.state.speed,
       event,
       direction,
       location: latlng ? {
@@ -119,12 +152,8 @@ export default class Pro extends React.Component {
 
   updateCarMarker = () => {
     let { location, direction } = this.state
-    // this.mapRef.current.animateToCoordinate coordinate, 1000)
-    let camera = {
-      center: location,
-    }
-    // this.mapRef.current.animateCamera(camera)
-    this.mapRef.current.fitToCoordinates([location], 2000)
+    this.mapRef.current.fitToCoordinates([location], 100)
+
   }
 
   onMapReadyDisplay = async () => {
@@ -142,7 +171,7 @@ export default class Pro extends React.Component {
   render() {
     const { navigation } = this.props;
     const handle = navigation.getParam("handle")
-    const { time, event } = this.state
+    const { time, event, status } = this.state
     const renderCarMarker = () => {
       // alert(JSON.stringify(this.state.location))
       return (
@@ -154,26 +183,30 @@ export default class Pro extends React.Component {
             // description={`Occured at: ${time}`}
             coordinate={this.state.location}
           >
-            <Image source={Images.saloon} style={{
-              width: 40,
-              height: 60,
-              transform: [
-                { rotate: `${this.state.direction}deg` }
-              ]
-            }} />
+            <Image
+              source={Images.saloon_online}
+              style={{
+                width: 40,
+                height: 60,
+                transform: [
+                  { rotate: `${this.state.direction}deg` }
+                ]
+              }} />
           </MapView.Marker>
           :
           <MapView.Marker
             ref={this.markerRef}
             coordinate={this.state.location}
           >
-            <Image source={Images.saloon} style={{
-              width: 40,
-              height: 60,
-              transform: [
-                { rotate: `${this.state.direction}deg` }
-              ]
-            }} />
+            <Image
+              source={status == "online" ? Images.saloon_online : Images.saloon_offline}
+              style={{
+                width: 40,
+                height: 60,
+                transform: [
+                  { rotate: `${this.state.direction}deg` }
+                ]
+              }} />
           </MapView.Marker>
       )
     }
@@ -219,11 +252,7 @@ export default class Pro extends React.Component {
             <MapView
               maxZoonLevel={10}
               rotateEnabled={false}
-              onMapReady={() => {
-                handle == "display" ?
-                  this.onMapReadyDisplay()
-                  : () => { }
-              }}
+              onMapReady={() => { this.onMapReadyDisplay() }}
               ref={this.mapRef}
               style={{ ...styles.mapStyle }}
               initialRegion={{

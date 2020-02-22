@@ -1,20 +1,18 @@
 import React from "react";
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   Animated,
   StyleSheet,
   Dimensions,
   ScrollView,
   Image,
-  ImageBackground,
   Platform,
   View,
   Modal,
   FlatList,
-  BackHandler,
   TouchableHighlight
 
 } from "react-native";
-import resolveAssetSource from "resolveAssetSource"
 import Spinner from "react-native-loading-spinner-overlay"
 import { Block, Text, theme } from "galio-framework";
 import { Button } from "../components";
@@ -26,9 +24,9 @@ import axios from "axios"
 import moment from "moment"
 import firebase from "firebase"
 import { config } from "../firebase-config"
-import { Audio } from 'expo-av';
 import Toast, { DURATION } from 'react-native-easy-toast'
 import Header from "../components/Header"
+import LiveStream from "../components/LiveStream";
 
 const { width, height } = Dimensions.get("screen");
 const thumbMeasure = (width - 48 - 32) / 3;
@@ -40,7 +38,6 @@ class Profile extends React.Component {
     super(props)
     this.state = {
       isLive: false,
-      liveVDO: false,
       searchQuery: "",
       fadeOut: new Animated.Value(0),
       modalVisible: false,
@@ -63,6 +60,7 @@ class Profile extends React.Component {
     this.modalRef = React.createRef()
     this.listRef = React.createRef()
     this.toastRef = React.createRef()
+    this.livestreamRef = React.createRef()
     try {
       firebase.initializeApp(config)
     } catch (err) { }
@@ -81,41 +79,32 @@ class Profile extends React.Component {
 
   }
 
-  connectToImageSocket = async () => {
-    this.s = require("socket.io-client")(SOCKET_ENDPOINT)
+  loadUserInfo = async () => {
     let userInfo = await AsyncStorage.getItem("userInfo")
     userInfo = JSON.parse(userInfo)
     let { uid } = userInfo
-    this.s.on("connect", () => {
-      console.log("connected to ter's socket")
-    })
-    this.s.on(`image_${uid}`, (data) => {
-      let stream_image = `data:image/jpeg;base64,${data}`
-      try {
-        clearTimeout(this.image_timer)
-      } catch (err) { }
-      try {
-        if (!this.state.isLive)
-          this.setState({ isLive: true })
-        this.refs.streamVDO.setNativeProps({
-          source: [{ uri: stream_image }]
-        });
-        this.image_timer = setTimeout(() => {
-          this.setState({ isLive: false })
-          this.refs.streamVDO.setNativeProps({
-            source: []
-          });
-        }, 2000)
-      } catch (err) { }
+    this.setState({ userInfo })
+    this.notificationRef = firebase.database().ref().child("notification").child(uid).limitToLast(1)
+    // child_added listener
+    this.notificationRef.on("child_added", (snapshot) => {
+      let found = this.state.notificationRecs.find(obj => {
+        return obj.timestamp === snapshot.val().timestamp
+      })
+      // if new child added to the collection so update it 
+      if (!found) {
+        this.state.notificationRecs = [snapshot.val(), ... this.state.notificationRecs]
+        this.setState({
+          notificationRecs: this.state.notificationRecs,
+          modalVisible: true
+        })
 
+      }
     })
-    this.s.on("disconnect", () => {
-      console.log("disconnected from ter's socket")
-    })
-    this.setState({ userInfo: userInfo })
   }
 
-
+  setIsLive(isLive) {
+    this.setState({ isLive })
+  }
 
   componentWillReceiveProps(nextProps) {
     let headerHeight = nextProps.navigation.getParam("headerHeight")
@@ -126,19 +115,21 @@ class Profile extends React.Component {
   }
 
   componentWillMount() {
+    this.getNotificationRecord()
     const { navigation } = this.props;
     this.props.navigation.setParams({
       profileSearch: this.searchEvent
     })
     this.focusListener = navigation.addListener('didFocus', () => {
       const { notificationRecs } = this.state
-      this.connectToImageSocket()
-      this.getNotificationRecord()
+      this.loadUserInfo()
     });
     this.leaveListener = navigation.addListener('didBlur', () => {
       this.setState({ searchQuery: "" })
-      this.s.disconnect()
     })
+    try {
+      this.notificationRef.off("child_added")
+    } catch (err) { }
   }
 
   componentDidUpdate(nextProps, nextState) {
@@ -151,13 +142,6 @@ class Profile extends React.Component {
     }
   }
 
-  componentWillUnmount() {
-    let { uid } = this.state.userInfo
-    let notificationRef = firebase
-      .database().ref()
-      .child("notification").child(uid).limitToLast(1)
-    notificationRef.off("child_added") // turn off notification on when unmount
-  }
 
   searchEvent = (query) => {
     this.setState({ searchQuery: query })
@@ -210,34 +194,6 @@ class Profile extends React.Component {
               notificationRecs: result,
               isLoading: false
             }, () => {
-              // realtime listener to new coming events
-              // reference to user collection
-              let notificationRef = firebase
-                .database().ref()
-                .child("notification").child(uid).limitToLast(1)
-              // child_added listener
-              notificationRef.on("child_added", (snapshot) => {
-                let found = this.state.notificationRecs.find(obj => {
-                  return obj.timestamp === snapshot.val().timestamp
-                })
-                // if new child added to the collection so update it 
-                if (!found) {
-                  this.state.notificationRecs = [snapshot.val(), ... this.state.notificationRecs]
-                  this.setState({
-                    notificationRecs: this.state.notificationRecs,
-                    modalVisible: true
-                  }, () => {
-                    let data = snapshot.val()
-                    // show toast
-                    let { timestamp } = data
-                    timestamp = moment(timestamp).format("DD-MM-YYYY HH:mm:ss a")
-                    this.toastRef.current.show(`Driver Drowsiness Detected! ${timestamp} `, 1500, () => {
-                      this.setState({ modalVisible: false })
-                    });
-                  })
-
-                }
-              })
             })
           } else {
             // console.log(code)
@@ -281,7 +237,7 @@ class Profile extends React.Component {
     let tmp_notificationRecs = [...notificationRecs]
     tmp_notificationRecs = tmp_notificationRecs.filter(data => {
       let { event, timestamp } = data
-      timestamp = moment(timestamp).format("DD-MM-YYYY  hh:MM:ss a").toString()
+      timestamp = moment(timestamp).format("DD-MM-YYYY  hh:mm:ss a").toString()
       return timestamp.includes(searchQuery) || event.toLowerCase().includes(searchQuery)
     })
     let slides = []
@@ -329,7 +285,7 @@ class Profile extends React.Component {
             let img = Images.iconEvent[event]
             let { timestamp: latestTimestamp } = this.state.notificationRecs[0] // TIMESTAMP OF THE LATEST EVENT
 
-            datetime = moment(timestamp).format("DD-MM-YYYY  hh:MM:ss a")
+            datetime = moment(timestamp).format("DD-MM-YYYY  hh:mm:ss a")
             return (
               <Animated.View
                 style={{
@@ -357,8 +313,6 @@ class Profile extends React.Component {
                     row
                     space="evenly"
                     style={{ width: "100%" }}
-
-                  //  space="evenly" 
                   >
                     <Block>
                       <Text style={{ color: read == false ? "#fff" : "#000" }}>
@@ -366,7 +320,7 @@ class Profile extends React.Component {
                         {datetime}
                       </Text>
                     </Block>
-                    <Block>
+                    <Block space="evenly" middle>
                       <Button
                         onPress={() => {
                           // this.updateNotificationStatus()
@@ -384,7 +338,15 @@ class Profile extends React.Component {
                         small
                         style={{ backgroundColor: read == false ? argonTheme.COLORS.INPUT_SUCCESS : "#20232a", paddingHorizontal: 0, paddingVertical: 0 }}
                       >
-                        Detail
+                        <Text color={"white"} bold>
+                          <MaterialCommunityIcons
+                            name="map-marker-radius"
+                            size={12}
+                            color="white"
+                          />
+                          {" "}
+                          Detail
+                        </Text>
                       </Button>
                     </Block>
                   </Block>
@@ -401,35 +363,7 @@ class Profile extends React.Component {
 
   render() {
     const { fname, lname, profile, regisdate } = this.state.userInfo
-    const { stream_image, liveVDO, isLive } = this.state
-    const liveVideoModal = () => (
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={liveVDO}
-      >
-        <TouchableHighlight
-          onPress={() => this.setState({ liveVDO: !liveVDO })}
-        >
-          <View style={{ ...styles.dimmer }} >
-            <Block
-              style={{ width: "100%", height: 300, backgroundColor: "black", position: "relative" }}
-              middle
-              space="evenly">
-              <Image
-                ref={"streamVDO"}
-                style={{ width: "100%", height: "100%" }}
-              />
-              <Block style={{ ...styles.liveLogo, ...{ backgroundColor: isLive ? "crimson" : "grey" } }}>
-                <Text bold color={"white"}>
-                  Live
-                </Text>
-              </Block>
-            </Block>
-          </View>
-        </TouchableHighlight>
-      </Modal >
-    )
+    const { stream_image, isLive } = this.state
 
     const notificationModal = () => (
       <Modal
@@ -444,7 +378,7 @@ class Profile extends React.Component {
             onPress={() => {
               let latestDrowsy = this.state.notificationRecs[0]
               let { latlng, timestamp } = latestDrowsy
-              datetime = moment(timestamp).format("DD-MM-YYYY HH:MM:ss")
+              datetime = moment(timestamp).format("DD-MM-YYYY hh:mm:ss")
               this.props.navigation.navigate("Map", {
                 handle: "display",
                 time: datetime,
@@ -464,120 +398,139 @@ class Profile extends React.Component {
 
 
     return (
-      <Block flex >
-        <Spinner
-          visible={this.state.isLoading}
-          textStyle={styles.spinnerTextStyle}
-        />
-        {liveVideoModal()}
-        {notificationModal()}
+      <>
+        <Block flex >
+          <Spinner
+            visible={this.state.isLoading}
+            textStyle={styles.spinnerTextStyle}
+          />
 
-        <ScrollView
-          vertical={true}
-          showsVerticalScrollIndicator={false}
-          style={{
-            width,
-            marginTop: Platform.OS === "ios" ? this.state.headerHeight : 0,
-          }}
-        >
-          <Block flex style={{ ...styles.profileCard }}>
-            <Block middle style={styles.avatarContainer}>
-              <Image
-                source={profile ? { uri: profile } : Images.defaultAvatar}
-                style={styles.avatar}
-              />
-            </Block>
-            <Block style={styles.info}>
-              <Block
-                middle
-                row
-                space="evenly"
-                style={{ marginTop: 20, paddingBottom: 24 }}
-              >
-                <Button
-                  onPress={() => {
-                    this.props.navigation.navigate("EditProfile", {
-                      userInfo: this.state.userInfo,
-                      updateUserInfo: this.updateUserInfo.bind(this)
-                    })
-                  }}
-                  small
-                  style={{ backgroundColor: argonTheme.COLORS.INPUT_SUCCESS }}
+          <LiveStream
+            ref={this.livestreamRef}
+            
+            setIsLive={this.setIsLive.bind(this)}
+          />
+          <ScrollView
+            vertical={true}
+            showsVerticalScrollIndicator={false}
+            style={{
+              width,
+              marginTop: Platform.OS === "ios" ? this.state.headerHeight : 0,
+            }}
+          >
+            <Block flex style={{ ...styles.profileCard }}>
+              <Block middle style={styles.avatarContainer}>
+                <Image
+                  source={profile ? { uri: profile } : Images.defaultAvatar}
+                  style={styles.avatar}
+                />
+              </Block>
+              <Block style={styles.info}>
+                <Block
+                  middle
+                  row
+                  space="evenly"
+                  style={{ marginTop: 20, paddingBottom: 24 }}
                 >
-                  Edit Profile
-                </Button>
-                <Button
-                  small
-                  style={{ backgroundColor: argonTheme.COLORS.DEFAULT }}
-                  onPress={() => {
-                    this.props.navigation.navigate("Map", {
-                      handle: "tracking",
-                      back: "Profile"
-                    })
-                  }}
-                >
-                  Tracking
-                    </Button>
-                <Button
-                  small
-                  style={{ backgroundColor: isLive ? "crimson" : "grey" }}
-                  onPress={() => {
-                    if (!isLive) return
-                    this.setState({ liveVDO: !this.state.liveVDO })
-                  }}
-                >LIVE</Button>
-              </Block>
+                  <Button
+                    onPress={() => {
+                      this.props.navigation.navigate("EditProfile", {
+                        userInfo: this.state.userInfo,
+                        updateUserInfo: this.updateUserInfo.bind(this)
+                      })
+                    }}
+                    small
+                    style={{ backgroundColor: argonTheme.COLORS.INPUT_SUCCESS }}
+                  >
+                    <Text color="white" bold>
+                      <MaterialIcons name={"settings"} size={12} />
+                      {" "}
+                      Edit
+                  </Text>
+                  </Button>
+                  <Button
+                    small
+                    style={{ backgroundColor: argonTheme.COLORS.DEFAULT }}
+                    onPress={() => {
+                      this.props.navigation.navigate("Map", {
+                        handle: "tracking",
+                        back: "Profile"
+                      })
+                    }}
+                  >
+                    <Text color="white" bold>
+                      <MaterialIcons name={"map"} size={12} />
+                      {" "}
+                      Track
+                  </Text>
+                  </Button>
+                  <Button
+                    small
+                    style={{ backgroundColor: isLive ? "crimson" : "grey" }}
+                    onPress={() => {
+                      if (!isLive) return
+                      this.livestreamRef.current.showLiveStream(true)
+                    }}
+                  >
+                    <Text color="white" bold>
+                      <MaterialIcons name={"live-tv"} size={12} />
+                      {" "}
+                      Live
+                  </Text>
+                  </Button>
+                </Block>
 
 
-            </Block>
+              </Block>
 
-            <Block flex>
-              <Block middle style={styles.nameInfo}>
-                <Text bold size={28} color="#32325D">
-                  {fname} {lname}
-                </Text>
-              </Block>
-              <Block middle style={styles.nameInfo}>
-                <Text size={15} color="#32325D">
-                  <Text bold>Registered date:</Text> {moment(regisdate).format("DD-MM-YYYY HH:MM:ss")}
-                </Text>
-              </Block>
-              <Block middle style={{ marginTop: 30, marginBottom: 16 }}>
-                <Block style={styles.divider} />
-              </Block>
-              <Block>
-                <Text bold size={28} color="#32325D">
-                  Event Records
+              <Block flex>
+                <Block middle style={styles.nameInfo}>
+                  <Text bold size={28} color="#32325D">
+                    {fname} {lname}
+                  </Text>
+                </Block>
+                <Block middle style={styles.nameInfo}>
+                  <Text size={15} color="#32325D">
+                    <Text bold>Registered date:</Text> {moment(regisdate).format("DD-MM-YYYY hh:mm:ss a")}
+                  </Text>
+                </Block>
+                <Block middle style={{ marginTop: 30, marginBottom: 16 }}>
+                  <Block style={styles.divider} />
+                </Block>
+                <Block>
+                  <Text bold size={28} color="#32325D">
+                    Event Records
                     </Text>
-                {
-                  this.state.searchQuery === "" ?
-                    <Text size={20}>
-                      total
+                  {
+                    this.state.searchQuery === "" ?
+                      <Text size={20}>
+                        total
                     <Text color={argonTheme.COLORS.WARNING}> {this.state.notificationRecs.length} </Text>
-                      record(s)
+                        record(s)
                   </Text> :
-                    <Text size={20}>
-                      searching for
+                      <Text size={20}>
+                        searching for
                     "<Text color={argonTheme.COLORS.WARNING}> {this.state.searchQuery} </Text>"
                   </Text>
-                }
-
-                <Block style={{ paddingTop: 20, paddingBottom: 30 }}
-                  onLayout={(event) => {
-                    var { x, y, width, height } = event.nativeEvent.layout;
-                    listWidth = width
-                  }}
-                >
-                  {
-                    this.state.isLoading ? null :
-                      this.renderRecords()
                   }
+
+                  <Block style={{ paddingTop: 20, paddingBottom: 30 }}
+                    onLayout={(event) => {
+                      var { x, y, width, height } = event.nativeEvent.layout;
+                      listWidth = width
+                    }}
+                  >
+                    {
+                      this.state.isLoading ? null :
+                        this.renderRecords()
+                    }
+                  </Block>
                 </Block>
               </Block>
             </Block>
-          </Block>
-        </ScrollView>
-      </Block >
+          </ScrollView>
+        </Block >
+      </>
     );
   }
 }

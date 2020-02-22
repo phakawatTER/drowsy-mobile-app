@@ -1,5 +1,6 @@
 import React from "react";
 import { DrawerItems, StackActions, NavigationActions } from "react-navigation";
+import { MaterialIcons, MaterialCommunityIcons, AntDesign } from "@expo/vector-icons"
 import {
   ScrollView,
   StyleSheet,
@@ -47,6 +48,8 @@ renderSignOutButton = (props) => {
           color={argonTheme.COLORS.ERROR}
           size={15}
         >
+          <AntDesign name={"logout"} size={15} />
+          {" "}
           Sign out
           </Text>
       </Block>
@@ -65,7 +68,8 @@ const Drawer = props => {
         <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
           <Block flex={0.05} style={styles.header} row>
             {/* <Logo /> */}
-            <Image source={Images.appLogo} style={{ width: 27.5, height: 27.5 }} />
+            {/* <Image source={Images.appLogo} style={{ width: 27.5, height: 27.5 }} /> */}
+            <MaterialCommunityIcons name="truck-fast" size={27.5} />
             <Text bold size={20}> Drowsy Detection App</Text>
           </Block>
           <DrawerItems {...props} />

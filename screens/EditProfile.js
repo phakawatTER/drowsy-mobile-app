@@ -164,11 +164,11 @@ class EditProfile extends React.Component {
         console.log(profile)
         return (
             <Block flex middle>
-                {/* <Spinner
+                <Spinner
                     visible={this.state.isLoading}
                     textStyle={styles.spinnerTextStyle}
                     textContent={isUploading ? `${uploadingPercentage}%` : null}
-                /> */}
+                />
                 <Block flex style={styles.registerContainer}>
                     <Block middle>
                         <Text bold size={28} color="#32325D">
@@ -228,8 +228,8 @@ class EditProfile extends React.Component {
 }
 
 const styles = StyleSheet.create({
-    spinnerTextStyle:{
-        color:"#fff"
+    spinnerTextStyle: {
+        color: "#fff"
     },
     profileUploader: {
         position: "relative"

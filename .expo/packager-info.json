@@ -3,7 +3,7 @@
   "expoServerPort": null,
   "packagerPort": null,
   "packagerPid": null,
-  "expoServerNgrokUrl": "https://wj-6pz.peterguy.drowsy-mobile-app.exp.direct",
-  "packagerNgrokUrl": "https://packager.wj-6pz.peterguy.drowsy-mobile-app.exp.direct",
-  "ngrokPid": 39798
+  "expoServerNgrokUrl": null,
+  "packagerNgrokUrl": null,
+  "ngrokPid": null
 }
