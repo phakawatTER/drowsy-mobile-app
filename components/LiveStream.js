@@ -1,7 +1,9 @@
 import React from "react"
 import { Block, Text, theme } from "galio-framework";
-import { SOCKET_ENDPOINT } from "../link"
+import { AntDesign } from '@expo/vector-icons';
+import { LIVESTREAM_SOCKET_ENDPOINT } from "../link"
 import {
+    Animated,
     StyleSheet,
     Dimensions,
     Image,
@@ -10,14 +12,16 @@ import {
     TouchableHighlight,
     AsyncStorage
 } from "react-native";
+import { TouchableOpacity } from "react-native-gesture-handler";
 const { width, height } = Dimensions.get("screen");
 const thumbMeasure = (width - 48 - 32) / 3;
-var listWidth = 0
 
 class LiveStream extends React.Component {
     constructor(props) {
         super(props)
         this.state = {
+            modal_opacity: new Animated.Value(0),
+            display_livestream: "none",
             liveVDO: false,
             isLive: false,
             ear: 0,
@@ -32,11 +36,37 @@ class LiveStream extends React.Component {
         this.s.disconnect()
     }
 
+    componentDidUpdate(prevProps, prevstate) {
+        if (prevProps.showLive !== this.props.showLive) {
+            if (this.props.showLive == true) {
+                this.setState({ display_livestream: "" }, () => {
+                    this.state.modal_opacity.setValue(0)
+                    Animated.timing(
+                        this.state.modal_opacity,
+                        {
+                            toValue: 1,
+                            duration: 300
+                        }
+                    ).start()
+                })
+
+            } else {
+                Animated.timing(
+                    this.state.modal_opacity,
+                    {
+                        toValue: 0,
+                        duration: 300
+                    }
+                ).start(() => { this.setState({ display_livestream: "none" }) })
+            }
+        }
+    }
+
     showLiveStream = (liveVDO) => {
         this.setState({ liveVDO })
     }
     connectToImageSocket = async () => {
-        this.s = require("socket.io-client")(SOCKET_ENDPOINT)
+        this.s = require("socket.io-client")(LIVESTREAM_SOCKET_ENDPOINT)
         let userInfo = await AsyncStorage.getItem("userInfo")
         userInfo = JSON.parse(userInfo)
         this.setState({ userInfo })
@@ -44,9 +74,8 @@ class LiveStream extends React.Component {
         this.s.on("connect", () => {
             console.log("connected to ter's socket")
         })
-        this.s.on(`image_${uid}`, (data) => {
+        this.s.on(`live_stream_${uid}`, (data) => {
             let { jpg_text, coor, ear, gas } = data
-            console.log(ear, coor, gas)
             let uri = `data:image/jpeg;base64,${jpg_text}`
             try {
                 clearTimeout(this.image_timer)
@@ -78,52 +107,69 @@ class LiveStream extends React.Component {
         })
     }
     render() {
-        let { liveVDO, isLive, ear, coor, gas } = this.state
+        let { isLive, ear, coor, gas } = this.state
+        console.log(this.props.showLive)
         return (
-            <Modal
-                visible={liveVDO}
-                transparent={true}
-                animated={"fade"}
-            >
-                <TouchableHighlight
-                    onPress={() => this.setState({ liveVDO: false})}
-                >
-                    <View style={{ ...styles.dimmer, backgroundColor: "rgba(0,0,0,0.9)" }} >
-                        <Block
-                            style={{ width: "100%", height: 300, backgroundColor: "black", position: "relative" }}
-                            middle
-                            space="evenly">
-                            <Image
-                                ref={"streamVDO"}
-                                style={{ width: "100%", height: "100%" }}
+            <>
+                <Animated.View
+                    style={{
+                        display: this.state.display_livestream,
+                        ...styles.dimmer,
+                        zIndex: 100,
+                        opacity: this.state.modal_opacity
+                    }
+                    } >
+                    <View style={{ position: "absolute", top: "7.5%", right: "5%" }}>
+                        <TouchableHighlight onPress={() => this.props.setShowLive(false)}>
+                            <AntDesign
+                                name="closecircleo"
+                                size={30}
+                                color="white"
                             />
-                            <Block style={{ ...styles.liveLogo, ...{ backgroundColor: isLive ? "crimson" : "grey" } }}>
-                                <Text bold color={"white"}>
-                                    Live
-                          </Text>
-                            </Block>
-                        </Block>
-                        <Block style={{ ...styles.info_block }}>
-                            <Text bold style={styles.info_text}>Current Data</Text>
-                            <Text style={styles.info_text}>EAR: {ear.toFixed(2)}</Text>
-                            <Text style={styles.info_text}>Coordinate: ({coor[0].toFixed(2)},{coor[1].toFixed(2)})</Text>
-                            {
-                                Object.keys(gas).map(key => {
-                                    return (
-                                        <Text style={styles.info_text}>{key.toUpperCase()}: {gas[key].toFixed(2)} ppm</Text>
-                                    )
-                                })
-                            }
-                        </Block>
+                        </TouchableHighlight>
                     </View>
-                </TouchableHighlight>
-            </Modal>
+
+                    <Block
+                        style={{ width: "100%", height: 300, backgroundColor: "black" }}
+                        middle
+                        space="evenly">
+
+                        <Image
+                            ref={"streamVDO"}
+                            style={{ width: "100%", height: "100%" }}
+                        />
+                        <Block style={{ ...styles.liveLogo, ...{ backgroundColor: isLive ? "crimson" : "grey" } }}>
+                            <Text bold color={"white"}>
+                                Live
+                          </Text>
+                        </Block>
+                    </Block>
+                    <Block style={{ ...styles.info_block }}>
+                        <Text bold style={styles.info_text}>Current Data</Text>
+                        <Text style={styles.info_text}>EAR: {ear.toFixed(2)}</Text>
+                        <Text style={styles.info_text}>Coordinate: ({coor[0].toFixed(2)},{coor[1].toFixed(2)})</Text>
+                        {
+                            Object.keys(gas).map(key => {
+                                return (
+                                    <Text style={styles.info_text}>{key.toUpperCase()}: {gas[key].toFixed(2)} ppm</Text>
+                                )
+                            })
+                        }
+                    </Block>
+                </Animated.View >
+            </>
         )
     }
 }
 
 const styles = StyleSheet.create({
+    backButton: {
+        display: "flex",
+        backgroundColor: "transparent",
+
+    },
     info_block: {
+        alignSelf: "baseline",
         padding: 10,
         width: "100%"
     },
@@ -139,7 +185,7 @@ const styles = StyleSheet.create({
     },
     dimmer: {
         position: "absolute",
-        backgroundColor: "rgba(0,0,0,0.5)",
+        backgroundColor: "rgba(0,0,0,0.9)",
         minWidth: width,
         minHeight: height,
         flex: 1,

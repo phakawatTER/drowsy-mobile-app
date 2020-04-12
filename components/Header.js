@@ -96,7 +96,7 @@ class Header extends React.Component {
 
           // <BasketButton key='basket-deals' navigation={navigation} isWhite={white} />
         ]);
-        case 'Dashboard':
+      case 'Dashboard':
         return ([
           // <BellButton key='chat-dashboard' navigation={navigation} isWhite={white} />,
           // <SearchButton key='search-product' navigation={navigation} isWhite={white} />,
@@ -136,7 +136,7 @@ class Header extends React.Component {
         color="black"
         style={styles.search}
         placeholder={
-          title === "Profile"?"Search occured event":"What are you looking for?"
+          title === "Profile" ? "Search occured event" : "What are you looking for?"
         }
         placeholderTextColor={'#8898AA'}
         onChangeText={title === "Profile" ? (text) => {

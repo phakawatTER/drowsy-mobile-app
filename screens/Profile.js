@@ -112,6 +112,7 @@ class Profile extends React.Component {
     if (this.state.headerHeight !== headerHeight) {
       this.setState({ headerHeight: headerHeight })
     }
+    
   }
 
   componentWillMount() {
@@ -283,8 +284,8 @@ class Profile extends React.Component {
             let { timestamp, event, direction, read, id, speed } = obj
 
             let img = Images.iconEvent[event]
+            if (img == undefined) img = Images.iconEvent["Fatigue driving"]
             let { timestamp: latestTimestamp } = this.state.notificationRecs[0] // TIMESTAMP OF THE LATEST EVENT
-
             datetime = moment(timestamp).format("DD-MM-YYYY  hh:mm:ss a")
             return (
               <Animated.View
@@ -363,7 +364,8 @@ class Profile extends React.Component {
 
   render() {
     const { fname, lname, profile, regisdate } = this.state.userInfo
-    const { stream_image, isLive } = this.state
+    const { stream_image } = this.state
+    const { isLive } = this.props.screenProps
 
     const notificationModal = () => (
       <Modal
@@ -399,16 +401,15 @@ class Profile extends React.Component {
 
     return (
       <>
+        {/* <LiveStream
+          ref={this.livestreamRef}
+
+          setIsLive={this.setIsLive.bind(this)}
+        /> */}
         <Block flex >
           <Spinner
             visible={this.state.isLoading}
             textStyle={styles.spinnerTextStyle}
-          />
-
-          <LiveStream
-            ref={this.livestreamRef}
-            
-            setIsLive={this.setIsLive.bind(this)}
           />
           <ScrollView
             vertical={true}
@@ -468,8 +469,8 @@ class Profile extends React.Component {
                     small
                     style={{ backgroundColor: isLive ? "crimson" : "grey" }}
                     onPress={() => {
-                      if (!isLive) return
-                      this.livestreamRef.current.showLiveStream(true)
+                      // if (!isLive) return
+                      this.props.screenProps.setShowLive(true)
                     }}
                   >
                     <Text color="white" bold>

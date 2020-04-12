@@ -15,6 +15,8 @@ import axios from "axios"
 import { Audio } from "expo-av"
 import { Platform, Switch } from "react-native"
 import DropdownAlert from 'react-native-dropdownalert';
+import LiveStream from "./components/LiveStream";
+
 let event_count = 0
 let trip_count = 0
 // cache app images
@@ -45,6 +47,8 @@ export default class App extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
+      showLive: false,
+      isLive: false,
       userInfo: null,
       notifications: []
     }
@@ -147,8 +151,12 @@ export default class App extends React.Component {
     })
   }
 
+  componentWillUpdate(nextProps, nextState) {
+    let { isLive } = this.state
+  }
 
   componentDidUpdate(prevProps, prevState) {
+
     if (prevState.userInfo !== this.state.userInfo) {
       // if user info exists
       if (this.state.userInfo) {
@@ -174,7 +182,7 @@ export default class App extends React.Component {
           let { event, timestamp } = snapshot.val()
           // if new child added to the collection so update it 
           try {
-            if (event == "Drowsy") {
+            if (["Dangerous Eye Close", "Fatigue"].includes(event)) {
               this.dropDownAlertRef.alertWithType('error', 'Event alert!', `Event "${event}" detected !!`);
               // play alarm sound
               const soundObject = new Audio.Sound();
@@ -201,10 +209,7 @@ export default class App extends React.Component {
   }
   componentDidMount() {
     this.loadUserInfo()
-  }
 
-  preventGoingBackToLogin = () => {
-    console.log("Is Android")
   }
 
   setUserInfo = (userInfo) => {
@@ -229,8 +234,20 @@ export default class App extends React.Component {
     isLoadingComplete: false,
   }
 
+  setShowLive(showLive) {
+    this.setState({ showLive })
+  }
+  setIsLive(isLive) {
+    this.setState({ isLive })
+  }
+  toggleLiveStream = () => {
+    let { showLive } = this.state
+    this.setState({ showLive: !showLive })
+  }
+
   render() {
     if (!this.state.isLoadingComplete) {
+
       return (
         <AppLoading
           startAsync={this._loadResourcesAsync}
@@ -239,6 +256,7 @@ export default class App extends React.Component {
         />
       );
     } else {
+
       return (
         <GalioProvider theme={argonTheme}>
 
@@ -246,6 +264,8 @@ export default class App extends React.Component {
             <Screens
               ref={this.screenRef}
               screenProps={{
+                setShowLive: this.setShowLive.bind(this),
+                isLive: this.state.isLive,
                 logOut: this.logOut,
                 setUserInfo: this.setUserInfo,
                 getUserInfo: this.getUserInfo,
@@ -255,8 +275,15 @@ export default class App extends React.Component {
               }}
             />
           </Block>
+          <LiveStream
+            ref={this.livestreamRef}
+            showLive={this.state.showLive}
+            setShowLive={this.setShowLive.bind(this)}
+            setIsLive={this.setIsLive.bind(this)}
+          />
+
           <DropdownAlert
-            // zIndex={100000000000000000000000000000000000000000}
+            zIndex={1000}
             ref={ref => { this.dropDownAlertRef = ref }}
           />
         </GalioProvider>
