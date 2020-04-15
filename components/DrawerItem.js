@@ -109,7 +109,7 @@ class DrawerItem extends React.Component {
           //   color={focused ? "white" : argonTheme.COLORS.ICON}
           // />
         );
-      case "Trip VDO":
+      case "Trip Video":
         return (
           <MaterialCommunityIcons
             name="face-profile"

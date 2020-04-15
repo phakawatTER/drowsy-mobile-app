@@ -110,6 +110,8 @@ export default class App extends React.Component {
         from: from
       })
       .then(response => {
+        trip_count = 0
+        event_count = 0
         console.log(response.data)
       })
       .catch(err => {
@@ -150,10 +152,6 @@ export default class App extends React.Component {
         })
       }
     })
-  }
-
-  componentWillUpdate(nextProps, nextState) {
-    let { isLive } = this.state
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -235,8 +233,8 @@ export default class App extends React.Component {
     isLoadingComplete: false,
   }
 
-  setShowLive(showLive, trip_vdo_uri) {
-    this.setState({ showLive, trip_vdo_uri })
+  setShowLive(showLive, trip_vdo_uri, trip_acctime) {
+    this.setState({ showLive, trip_vdo_uri, trip_acctime })
   }
   setIsLive(isLive) {
     this.setState({ isLive })
@@ -281,6 +279,7 @@ export default class App extends React.Component {
             userInfo={this.state.userInfo}
             showLive={this.state.showLive}
             vdo_uri={this.state.trip_vdo_uri}
+            trip_acctime={this.state.trip_acctime}
             setShowLive={this.setShowLive.bind(this)}
             setIsLive={this.setIsLive.bind(this)}
           />

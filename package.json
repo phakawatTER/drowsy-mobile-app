@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^10.0.6",
-    "axios": "^0.19.0",
+    "axios": "^0.19.2",
     "expo": "^34.0.3",
     "expo-asset": "^6.0.0",
     "expo-av": "^7.0.1",
@@ -26,6 +26,7 @@
     "galio-framework": "^0.6.1",
     "js-sha512": "^0.8.0",
     "moment": "^2.24.0",
+    "moment-timezone": "^0.5.28",
     "prop-types": "^15.7.2",
     "react": "16.8.3",
     "react-native": "https://github.com/expo/react-native/archive/sdk-34.0.0.tar.gz",

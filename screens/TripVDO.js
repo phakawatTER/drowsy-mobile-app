@@ -14,7 +14,7 @@ import {
     TouchableHighlight
 
 } from "react-native";
-import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { AntDesign, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Video } from "expo-av"
 import Spinner from "react-native-loading-spinner-overlay"
 import { Block, Text, theme } from "galio-framework";
@@ -115,6 +115,7 @@ class Profile extends React.Component {
 
 
     selectVDO = async (file) => {
+        let acctime = file.split(".")[0]
         this.setState({ isLoading: true })
         if (!Object.keys(this.state.video_file_uri).includes(file)) { // if the file is not download and cached
             let { uid } = this.props.screenProps.getUserInfo()
@@ -132,7 +133,7 @@ class Profile extends React.Component {
                 console.log('Finished downloading to ', current_uri);
                 this.state.video_file_uri[file] = current_uri
                 this.setState({ current_uri, video_file_uri: this.state.video_file_uri, isLoading: false })
-                this.props.screenProps.setShowLive(true, current_uri)
+                this.props.screenProps.setShowLive(true, current_uri, acctime)
 
             } catch (e) {
                 this.setState({ isLoading: false })
@@ -141,75 +142,95 @@ class Profile extends React.Component {
         } else {
             let current_uri = this.state.video_file_uri[file]
             this.setState({ current_uri, isLoading: false })
-            this.props.screenProps.setShowLive(true, current_uri)
+            this.props.screenProps.setShowLive(true, current_uri, acctime)
 
         }
     }
 
 
     render() {
-        let { vdo_list } = this.state
+        let { vdo_list, isLoading } = this.state
 
         const renderTripVDOList = () => {
-
-            return (
-                <FlatList
-                    data={vdo_list}
-                    renderItem={({ item }) => {
-                        if (vdo_list.length == 0) return (<></>)
-                        return (
-                            <Animated.View
-                                style={{
-                                    marginLeft: 0,
-                                    paddingHorizontal: 0,
-                                    paddingVertical: 0,
-                                    borderRadius: 5,
-                                }}
+            if (vdo_list.length == 0 && !isLoading) {
+                return (
+                    <>
+                        <Block>
+                            <Text
+                                bold
+                                color="#32325D"
+                                style={{ textAlign: "center" }}
+                                size={48}
                             >
-                                <Block
-                                    left
-                                    space="evenly"
+                                No Video Records Found!
+                            </Text>
+                        </Block>
+                    </>
+                )
+            } else {
+
+                return (
+                    <FlatList
+                        data={vdo_list}
+                        renderItem={({ item }) => {
+                            if (vdo_list.length == 0) return (<></>)
+                            return (
+                                <Animated.View
                                     style={{
-                                        paddingVertical: 10,
+                                        marginLeft: 0,
+                                        paddingHorizontal: 0,
+                                        paddingVertical: 0,
+                                        borderRadius: 5,
                                     }}
                                 >
                                     <Block
                                         left
-                                        row
                                         space="evenly"
-                                        style={{ width: "100%" }}
+                                        style={{
+                                            paddingVertical: 10,
+                                        }}
                                     >
-                                        <Block style={{ flexDirection: "row" }}>
-                                            <Text style={{ color: "#000" }} bold>
-                                                Trip Acctime {" "}
-                                            </Text>
-                                            <Text>{item.split(".")[0]}</Text>
-                                        </Block>
-                                        <Block space="evenly" middle>
-                                            <Button
-                                                onPress={() => this.selectVDO(item)}
-                                                small
-                                                style={{ backgroundColor: argonTheme.COLORS.SUCCESS, paddingHorizontal: 0, paddingVertical: 0 }}
-                                            >
-                                                <Text color={"white"} bold>
-                                                    <MaterialCommunityIcons
-                                                        name="map-marker-radius"
-                                                        size={12}
-                                                        color="white"
-                                                    />
-                                                    {" "}
+                                        <Block
+                                            left
+                                            row
+                                            space="evenly"
+                                            style={{ width: "100%" }}
+                                        >
+                                            <Block style={{ flexDirection: "row" }}>
+                                                <Text style={{ color: "#000" }}>
+                                                    <Text bold>Trip Acctime</Text> {item.split(".")[0]}
+                                                    {"\n"}
+                                                    <Text bold>Datetime</Text> {moment.unix(item.split(".")[0]).format("DD-MM-YYYY HH:mm:ss")}
+                                                </Text>
+                                            </Block>
+
+                                            <Block space="evenly" middle>
+                                                <Button
+                                                    onPress={() => this.selectVDO(item)}
+                                                    small
+                                                    style={{ backgroundColor: argonTheme.COLORS.SUCCESS, paddingHorizontal: 0, paddingVertical: 0 }}
+                                                >
+                                                    <Text color={"white"} bold>
+                                                        <AntDesign
+                                                            name="videocamera"
+                                                            size={12}
+                                                            color="white"
+                                                        />
+                                                        {" "}
                                       View
                                     </Text>
-                                            </Button>
+                                                </Button>
+                                            </Block>
+
                                         </Block>
                                     </Block>
-                                </Block>
-                                <Block style={styles.divider} />
-                            </Animated.View>
-                        )
-                    }}
-                />
-            )
+                                    <Block style={styles.divider} />
+                                </Animated.View>
+                            )
+                        }}
+                    />
+                )
+            }
         }
 
         return (
@@ -222,42 +243,23 @@ class Profile extends React.Component {
                 <ScrollView
                     vertical={true}
                     showsVerticalScrollIndicator={false}
-                    style={{
-                        width,
-                    }}
+                    style={{ width }}
                 >
-                    <Block flex style={{ ...styles.profileCard }}>
+                    <Block flex style={{
+                        ...styles.profileCard
+                    }}>
                         <Block flex>
-                            {/* {
-                                this.state.current_uri ?
-                                    <Video
-                                        ref={r => this.vid = r}
-                                        source={{ uri: this.state.current_uri }}
-                                        rate={1.0}
-                                        volume={1.0}
-                                        muted={false}
-                                        resizeMode="cover"
-                                        repeat
-                                        useNativeControls
-                                        style={{ width: "100%", height: 300 }}
-                                    />
-                                    : null
-                            } */}
                             <Block>
-                                <Text bold size={28} color="#32325D">Trip VDO</Text>
+                                <Text bold size={28} color="#32325D">Trip Video</Text>
 
                                 <Text size={20}>
-                                    total<Text color={argonTheme.COLORS.WARNING}>
+                                    total{" "}<Text color={argonTheme.COLORS.WARNING}>
                                         {this.state.vdo_list.length}
-                                    </Text>
-                                    record(s)
+                                    </Text>{" "}
+                                    video(s)
                             </Text>
                                 {renderTripVDOList()}
-
                             </Block>
-                            {/* <Block middle style={{ marginTop: 30, marginBottom: 16 }}>
-                                <Block style={styles.divider} />
-                            </Block> */}
                         </Block>
                     </Block>
 

@@ -3,6 +3,7 @@ import { Block, Text, theme } from "galio-framework";
 import { AntDesign } from '@expo/vector-icons';
 import { LIVESTREAM_SOCKET_ENDPOINT } from "../link"
 import { Video } from "expo-av"
+import moment from "moment-timezone"
 import {
     Animated,
     StyleSheet,
@@ -13,7 +14,6 @@ import {
     TouchableHighlight,
     AsyncStorage
 } from "react-native";
-import { TouchableOpacity } from "react-native-gesture-handler";
 const { width, height } = Dimensions.get("screen");
 const thumbMeasure = (width - 48 - 32) / 3;
 
@@ -39,6 +39,10 @@ class LiveStream extends React.Component {
     }
 
     componentDidUpdate(prevProps, prevstate) {
+        if (JSON.stringify(prevProps.userInfo) !== JSON.stringify(this.props.userInfo)) {  // if user info updated
+            this.s.disconnect()
+            this.connectToImageSocket()
+        }
         if (prevProps.showLive !== this.props.showLive) {
             if (this.props.showLive == true) {
                 this.setState({ display_livestream: "" }, () => {
@@ -116,6 +120,7 @@ class LiveStream extends React.Component {
                         opacity: this.state.modal_opacity
                     }
                     } >
+                    {/* CLOSE MODAL BUTTON */}
                     <View style={{ position: "absolute", top: "7.5%", right: "5%" }}>
                         <TouchableHighlight onPress={() => this.props.setShowLive(false)}>
                             <AntDesign
@@ -144,18 +149,42 @@ class LiveStream extends React.Component {
                             </Block>
                         </Block>
                             :
-                            <Video
-                                ref={r => this.vid = r}
-                                source={{ uri: this.props.vdo_uri }}
-                                rate={1.0}
-                                volume={1.0}
-                                muted={false}
-                                resizeMode="cover"
-                                repeat
-                                useNativeControls
-                                shouldPlay
-                                style={{ width: "100%", height: 300 }}
-                            />
+                            <>
+                                <Block style={styles.vdo_title_block}>
+                                    <Text bold color="white" size={24}>
+                                        <AntDesign
+                                            name="videocamera"
+                                            size={22}
+                                            color="crimson"
+                                        />
+                                        {" "}RECORDED VIDEO
+                                    </Text>
+                                </Block>
+                                <Block style={styles.vdo_title_block}>
+                                    <Text bold color="white" size={15}>
+                                        ACCTIME:{" "}
+                                    </Text>
+                                    <Text color="white" size={15}>{this.props.trip_acctime}</Text>
+                                </Block>
+                                <Block style={styles.vdo_title_block}>
+                                    <Text bold color="white" size={15}>
+                                        DATETIME:{" "}
+                                    </Text>
+                                    <Text color="white" size={15}>{moment.unix(this.props.trip_acctime).format("DD-MM-YYYY HH:mm:ss")}</Text>
+                                </Block>
+                                <Video
+                                    ref={r => this.vid = r}
+                                    source={{ uri: this.props.vdo_uri }}
+                                    rate={1.0}
+                                    volume={1.0}
+                                    muted={false}
+                                    resizeMode="cover"
+                                    repeat
+                                    useNativeControls
+                                    shouldPlay
+                                    style={{ width: "100%", height: 300 }}
+                                />
+                            </>
                     }
                     {
                         !this.props.vdo_uri ?
@@ -180,6 +209,11 @@ class LiveStream extends React.Component {
 }
 
 const styles = StyleSheet.create({
+    vdo_title_block: {
+        padding: 10,
+        flexDirection: "row",
+        width: "100%"
+    },
     backButton: {
         display: "flex",
         backgroundColor: "transparent",

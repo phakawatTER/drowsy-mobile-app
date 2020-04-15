@@ -134,12 +134,12 @@ const ProfileStack = createStackNavigator(
   }
 );
 
-const TripVDOStack = createStackNavigator({
-  TripVDO: {
+const TripVideoStack = createStackNavigator({
+  TripVideo: {
     screen: TripVDO,
     navigationOptions: ({ navigation }) => ({
       header: (
-        <Header title="TripVDO" navigation={navigation} iconColor={"#fff"} titleColor={"#fff"} bgColor={"#20232a"} />
+        <Header title="TripVideo" navigation={navigation} iconColor={"#fff"} titleColor={"#fff"} bgColor={"#20232a"} />
       ),
       headerTransparent: false
     }),
@@ -249,11 +249,11 @@ const AuthStack = createDrawerNavigator(
         )
       })
     },
-    TripVDO: {
-      screen: TripVDOStack,
+    TripVideo: {
+      screen: TripVideoStack,
       navigationOptions: navOpt => ({
         drawerLabel: ({ focused }) => (
-          <DrawerItem focused={focused} screen="TripVDO" title="Trip VDO" />
+          <DrawerItem focused={focused} screen="TripVideo" title="Trip Video" />
         )
       })
     },
