@@ -17,6 +17,7 @@ import Home from "../screens/Home";
 import Onboarding from "../screens/Onboarding";
 import Map from "../screens/Map";
 import Profile from "../screens/Profile";
+import TripVDO from "../screens/TripVDO"
 import EditProfile from "../screens/EditProfile"
 import Elements from "../screens/Elements";
 import Articles from "../screens/Articles";
@@ -133,6 +134,19 @@ const ProfileStack = createStackNavigator(
   }
 );
 
+const TripVDOStack = createStackNavigator({
+  TripVDO: {
+    screen: TripVDO,
+    navigationOptions: ({ navigation }) => ({
+      header: (
+        <Header title="TripVDO" navigation={navigation} iconColor={"#fff"} titleColor={"#fff"} bgColor={"#20232a"} />
+      ),
+      headerTransparent: false
+    }),
+
+  }
+}, { cardStyle: { backgroundColor: "#FFFFFF" }, transitionConfig })
+
 const HistoryStack = createStackNavigator({
   History: {
     screen: History,
@@ -151,7 +165,7 @@ const DashboardStack = createStackNavigator({
     screen: Dashboard,
     navigationOptions: ({ navigation }) => ({
       header: (
-        <Header title="Dashboard" navigation={navigation}  iconColor={"#fff"} titleColor={"#fff"} bgColor={"#20232a"} />
+        <Header title="Dashboard" navigation={navigation} iconColor={"#fff"} titleColor={"#fff"} bgColor={"#20232a"} />
       ),
       headerTransparent: false
     }),
@@ -232,6 +246,14 @@ const AuthStack = createDrawerNavigator(
       navigationOptions: navOpt => ({
         drawerLabel: ({ focused }) => (
           <DrawerItem focused={focused} screen="Profile" title="Profile" />
+        )
+      })
+    },
+    TripVDO: {
+      screen: TripVDOStack,
+      navigationOptions: navOpt => ({
+        drawerLabel: ({ focused }) => (
+          <DrawerItem focused={focused} screen="TripVDO" title="Trip VDO" />
         )
       })
     },

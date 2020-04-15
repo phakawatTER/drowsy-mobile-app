@@ -367,37 +367,6 @@ class Profile extends React.Component {
     const { stream_image } = this.state
     const { isLive } = this.props.screenProps
 
-    const notificationModal = () => (
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={this.state.modalVisible}
-        onRequestClose={() => {
-          Alert.alert('Modal has been closed.');
-        }}>
-        <View style={{ ...styles.dimmer }} >
-          <Toast
-            onPress={() => {
-              let latestDrowsy = this.state.notificationRecs[0]
-              let { latlng, timestamp } = latestDrowsy
-              datetime = moment(timestamp).format("DD-MM-YYYY hh:mm:ss")
-              this.props.navigation.navigate("Map", {
-                handle: "display",
-                time: datetime,
-                latlng: latlng,
-                back: "Profile"
-              })
-            }}
-            ref={this.toastRef}
-            defaultCloseDelay={1500}
-            style={{ backgroundColor: argonTheme.COLORS.ERROR }}
-            position={"top"}
-            positionValue={this.state.headerHeight - 10}
-            opacity={0.9} />
-        </View>
-      </Modal>
-    )
-
 
     return (
       <>

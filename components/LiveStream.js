@@ -2,6 +2,7 @@ import React from "react"
 import { Block, Text, theme } from "galio-framework";
 import { AntDesign } from '@expo/vector-icons';
 import { LIVESTREAM_SOCKET_ENDPOINT } from "../link"
+import { Video } from "expo-av"
 import {
     Animated,
     StyleSheet,
@@ -22,6 +23,7 @@ class LiveStream extends React.Component {
         this.state = {
             modal_opacity: new Animated.Value(0),
             display_livestream: "none",
+            vdo_uri: null,
             liveVDO: false,
             isLive: false,
             ear: 0,
@@ -62,13 +64,9 @@ class LiveStream extends React.Component {
         }
     }
 
-    showLiveStream = (liveVDO) => {
-        this.setState({ liveVDO })
-    }
     connectToImageSocket = async () => {
         this.s = require("socket.io-client")(LIVESTREAM_SOCKET_ENDPOINT)
-        let userInfo = await AsyncStorage.getItem("userInfo")
-        userInfo = JSON.parse(userInfo)
+        let userInfo = this.props.userInfo
         this.setState({ userInfo })
         let { uid } = userInfo
         this.s.on("connect", () => {
@@ -108,7 +106,6 @@ class LiveStream extends React.Component {
     }
     render() {
         let { isLive, ear, coor, gas } = this.state
-        console.log(this.props.showLive)
         return (
             <>
                 <Animated.View
@@ -129,33 +126,53 @@ class LiveStream extends React.Component {
                         </TouchableHighlight>
                     </View>
 
-                    <Block
-                        style={{ width: "100%", height: 300, backgroundColor: "black" }}
-                        middle
-                        space="evenly">
+                    {
+                        !this.props.vdo_uri ? <Block
+                            style={{ width: "100%", height: 300, backgroundColor: "black" }}
+                            middle
+                            space="evenly">
+                            <Image
+                                ref={"streamVDO"}
+                                style={{ width: "100%", height: "100%" }}
+                            />
 
-                        <Image
-                            ref={"streamVDO"}
-                            style={{ width: "100%", height: "100%" }}
-                        />
-                        <Block style={{ ...styles.liveLogo, ...{ backgroundColor: isLive ? "crimson" : "grey" } }}>
-                            <Text bold color={"white"}>
-                                Live
+
+                            <Block style={{ ...styles.liveLogo, ...{ backgroundColor: isLive ? "crimson" : "grey" } }}>
+                                <Text bold color={"white"}>
+                                    Live
                           </Text>
+                            </Block>
                         </Block>
-                    </Block>
-                    <Block style={{ ...styles.info_block }}>
-                        <Text bold style={styles.info_text}>Current Data</Text>
-                        <Text style={styles.info_text}>EAR: {ear.toFixed(2)}</Text>
-                        <Text style={styles.info_text}>Coordinate: ({coor[0].toFixed(2)},{coor[1].toFixed(2)})</Text>
-                        {
-                            Object.keys(gas).map(key => {
-                                return (
-                                    <Text style={styles.info_text}>{key.toUpperCase()}: {gas[key].toFixed(2)} ppm</Text>
-                                )
-                            })
-                        }
-                    </Block>
+                            :
+                            <Video
+                                ref={r => this.vid = r}
+                                source={{ uri: this.props.vdo_uri }}
+                                rate={1.0}
+                                volume={1.0}
+                                muted={false}
+                                resizeMode="cover"
+                                repeat
+                                useNativeControls
+                                shouldPlay
+                                style={{ width: "100%", height: 300 }}
+                            />
+                    }
+                    {
+                        !this.props.vdo_uri ?
+                            <Block style={{ ...styles.info_block }}>
+                                <Text bold style={styles.info_text}>Current Data</Text>
+                                <Text style={styles.info_text}>EAR: {ear.toFixed(2)}</Text>
+                                <Text style={styles.info_text}>Coordinate: ({coor[0].toFixed(2)},{coor[1].toFixed(2)})</Text>
+                                {
+                                    Object.keys(gas).map(key => {
+                                        return (
+                                            <Text style={styles.info_text}>{key.toUpperCase()}: {gas[key].toFixed(2)} ppm</Text>
+                                        )
+                                    })
+                                }
+                            </Block>
+                            : null
+                    }
                 </Animated.View >
             </>
         )

@@ -27,7 +27,6 @@ import axios from "axios"
 import moment from "moment"
 import firebase from "firebase"
 import { config } from "../firebase-config"
-import Toast, { DURATION } from 'react-native-easy-toast'
 import { PieChart } from 'react-native-svg-charts'
 import 'react-native-svg';
 const { width, height } = Dimensions.get("screen");
@@ -283,34 +282,6 @@ class Profile extends React.Component {
                     visible={this.state.isLoading}
                     textStyle={styles.spinnerTextStyle}
                 />
-                {/* <Modal
-                    animationType="fade"
-                    transparent={true}
-                    visible={this.state.modalVisible}
-                    onRequestClose={() => {
-                        Alert.alert('Modal has been closed.');
-                    }}>
-                    <View style={{ ...styles.dimmer }} >
-                        <Toast
-                            onPress={() => {
-                                let latestDrowsy = this.state.notificationRecs[0]
-                                let { latlng, timestamp } = latestDrowsy
-                                datetime = moment(timestamp).format("DD-MM-YYYY HH:MM:ss")
-                                this.props.navigation.navigate("Map", {
-                                    handle: "display",
-                                    time: datetime,
-                                    latlng: latlng,
-                                    back: "Profile"
-                                })
-                            }}
-                            ref={this.toastRef}
-                            defaultCloseDelay={1500}
-                            style={{ backgroundColor: argonTheme.COLORS.ERROR, color: "white" }}
-                            position={"top"}
-                            positionValue={this.state.headerHeight - 10}
-                            opacity={0.9} />
-                    </View>
-                </Modal> */}
                 <ScrollView
                     vertical={true}
                     showsVerticalScrollIndicator={false}

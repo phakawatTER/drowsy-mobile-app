@@ -109,6 +109,20 @@ class DrawerItem extends React.Component {
           //   color={focused ? "white" : argonTheme.COLORS.ICON}
           // />
         );
+      case "Trip VDO":
+        return (
+          <MaterialCommunityIcons
+            name="face-profile"
+            size={17.5}
+            color={focused ? "white" : argonTheme.COLORS.ICON}
+          />
+          // <Icon
+          //   name="spaceship"
+          //   family="ArgonExtra"
+          //   size={12}
+          //   color={focused ? "white" : argonTheme.COLORS.ICON}
+          // />
+        );
       case "Getting Started":
         return <Icon />;
       case "Log out":

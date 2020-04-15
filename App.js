@@ -47,6 +47,7 @@ export default class App extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
+      trip_vdo_uri: null,
       showLive: false,
       isLive: false,
       userInfo: null,
@@ -234,8 +235,8 @@ export default class App extends React.Component {
     isLoadingComplete: false,
   }
 
-  setShowLive(showLive) {
-    this.setState({ showLive })
+  setShowLive(showLive, trip_vdo_uri) {
+    this.setState({ showLive, trip_vdo_uri })
   }
   setIsLive(isLive) {
     this.setState({ isLive })
@@ -277,7 +278,9 @@ export default class App extends React.Component {
           </Block>
           <LiveStream
             ref={this.livestreamRef}
+            userInfo={this.state.userInfo}
             showLive={this.state.showLive}
+            vdo_uri={this.state.trip_vdo_uri}
             setShowLive={this.setShowLive.bind(this)}
             setIsLive={this.setIsLive.bind(this)}
           />
