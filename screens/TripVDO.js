@@ -47,6 +47,7 @@ class Profile extends React.Component {
             vdo_list: [],
             video_file_uri: {},
             current_uri: "",
+            vdo_download_progress: 0,
             userInfo: {
                 fname: "",
                 lname: "",
@@ -115,26 +116,35 @@ class Profile extends React.Component {
 
 
     selectVDO = async (file) => {
+        let userInfo = this.props.screenProps.getUserInfo()
+        let { uid } = userInfo
         let acctime = file.split(".")[0]
         this.setState({ isLoading: true })
         if (!Object.keys(this.state.video_file_uri).includes(file)) { // if the file is not download and cached
             let { uid } = this.props.screenProps.getUserInfo()
             const downloadResumable = FileSystem.createDownloadResumable(
-                API_GET_VDOSTREAM,
+                `${API_GET_VDOSTREAM}/${uid}/${file}`,
                 FileSystem.documentDirectory + file,
-                {
-                    headers: {
-                        uid, file
-                    }
-                },
+                {},
+                (snapshot) => {
+                    let { totalBytesWritten, totalBytesExpectedToWrite } = snapshot
+                    let vdo_download_progress = (totalBytesWritten / totalBytesExpectedToWrite) * 100
+                    console.log(vdo_download_progress, "%")
+                    this.setState({ vdo_download_progress })
+                }
             );
             try {
-                const { uri: current_uri } = await downloadResumable.downloadAsync();
-                console.log('Finished downloading to ', current_uri);
+                let current_uri = `${API_GET_VDOSTREAM}/${uid}/${file}`
                 this.state.video_file_uri[file] = current_uri
                 this.setState({ current_uri, video_file_uri: this.state.video_file_uri, isLoading: false })
                 this.props.screenProps.setShowLive(true, current_uri, acctime)
-
+                // downloadResumable.downloadAsync().then(data => {
+                //     console.log("this is data", data)
+                //     let { uri: current_uri } = data
+                // this.state.video_file_uri[file] = current_uri
+                // this.setState({ current_uri, video_file_uri: this.state.video_file_uri, isLoading: false })
+                // this.props.screenProps.setShowLive(true, current_uri, acctime)
+                // });
             } catch (e) {
                 this.setState({ isLoading: false })
                 console.error(e);
