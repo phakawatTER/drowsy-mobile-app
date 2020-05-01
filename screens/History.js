@@ -191,39 +191,37 @@ class History extends React.Component {
                     transparent
                     animated
                 >
-                    <TouchableOpacity>
-                        <Block
-                            style={{ backgroundColor: "rgba(0,0,0,0.8)", height: height, width: width }}
-                        >
-                            <Block style={{ marginTop: "50%" }}>
-                                <Block middle>
-                                    <Text h4 color={"white"} bold>SELECT {handle.toUpperCase()} DATE</Text>
-                                </Block>
-                                <DatePickerIOS
-                                    mode={"date"}
-                                    style={{ padding: theme.SIZES.BASE }}
-                                    date={handle == "start" ? this.state.startdate : this.state.stopdate}
-                                    onDateChange={(evt) => { this.dateChangeHandler(evt, handle) }}
-                                    maximumDate={new Date()}
-                                >
-                                </DatePickerIOS>
-                                <Block middle>
-                                    <Button
-                                        onPress={() => {
-                                            this.toggleDatePicker(handle)
-                                        }}
-                                        style={{ backgroundColor: argonTheme.COLORS.SUCCESS, paddingHorizontal: 0, paddingVertical: 0 }}
-                                    >
-
-                                        Confirm
-                                    </Button>
-                                </Block>
+                    <Block
+                        style={{ backgroundColor: "rgba(255,255,255,0.90)", height, width }}
+                    >
+                        <Block style={{ marginTop: "50%" }}>
+                            <Block middle>
+                                <Text h4 bold>SELECT {handle.toUpperCase()} DATE</Text>
                             </Block>
+                            <DatePickerIOS
+                                mode={"date"}
+                                // style={{ padding: theme.SIZES.BASE, color: "white" }}
+                                date={handle == "start" ? this.state.startdate : this.state.stopdate}
+                                onDateChange={(evt) => { this.dateChangeHandler(evt, handle) }}
+                                maximumDate={new Date()}
+                            >
+                            </DatePickerIOS>
+                            <Block middle>
+                                <Button
+                                    onPress={() => {
+                                        this.toggleDatePicker(handle)
+                                    }}
+                                    style={{ backgroundColor: argonTheme.COLORS.SUCCESS, paddingHorizontal: 0, paddingVertical: 0 }}
+                                >
 
+                                    Confirm
+                                    </Button>
+                            </Block>
                         </Block>
 
-                        {/* </Block> */}
-                    </TouchableOpacity>
+                    </Block>
+
+                    {/* </Block> */}
                 </Modal>
             )
         }

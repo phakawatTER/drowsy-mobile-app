@@ -13,7 +13,7 @@
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash.png",
-      "resizeMode": "cover",
+      "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "updates": {
@@ -25,6 +25,6 @@
     "ios": {
       "supportsTablet": true
     },
-    "description": "video are streamed from server \n*** previous version the video has to be downloaded first"
+    "description": "video are streamed from server \n*** previous version the video has to be downloaded first\n*** add new trip alert"
   }
 }

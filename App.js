@@ -16,6 +16,7 @@ import { Audio } from "expo-av"
 import { Platform, Switch } from "react-native"
 import DropdownAlert from 'react-native-dropdownalert';
 import LiveStream from "./components/LiveStream";
+import { SOCKET_ENDPOINT } from "./link.js"
 
 let event_count = 0
 let trip_count = 0
@@ -73,6 +74,8 @@ export default class App extends React.Component {
     this.setState({ notifications })
   }
 
+
+
   registerForPushNotification = async () => {
     const { uid } = this.state.userInfo
     const expoPushToken = this.state.userInfo.expoPushToken
@@ -125,8 +128,7 @@ export default class App extends React.Component {
     this.setState({ userInfo: userInfo }, () => {
       if (userInfo) {
         let { uid } = userInfo
-        let loginRef = firebase.database().ref()
-          .child("login").child(uid).child("app").orderByKey().limitToLast(1)
+        let loginRef = firebase.database().ref().child("login").child(uid).child("app").orderByKey().limitToLast(1)
         // TO DETECT DUBPLICATE LOGIN
         // APP USER ARE NOT ALLOWED TO LOGGED IN DUBPLICATEDLY
         loginRef.on("child_added", (snapshot) => {
@@ -154,13 +156,23 @@ export default class App extends React.Component {
     })
   }
 
+  registerSocketListener = (uid) => {
+    this.socket = require("socket.io-client")(SOCKET_ENDPOINT)
+    this.socket.on(`new_vdo_${uid}`, data => {
+      let { file } = data
+      // alert("New Video is Ready")
+      this.dropDownAlertRef.alertWithType('success', 'New VDO is Ready!', `Acctime ${file}`);
+    })
+  }
+
   componentDidUpdate(prevProps, prevState) {
 
     if (prevState.userInfo !== this.state.userInfo) {
       // if user info exists
       if (this.state.userInfo) {
-        this.registerForPushNotification()
         let { uid } = this.state.userInfo
+        this.registerSocketListener(uid)
+        this.registerForPushNotification()
         this.databaseRef = firebase.database().ref()
         this.notificationRef = this.databaseRef.child("notification").child(uid).limitToLast(1)
         this.tripRef = this.databaseRef.child(`usertrips/${uid}`).limitToLast(1)
@@ -179,9 +191,9 @@ export default class App extends React.Component {
             return
           }
           let { event, timestamp } = snapshot.val()
-          // if new child added to the collection so update it 
+          // if new child added to the collection so update it
           try {
-            if (["Dangerous Eye Close", "Fatigue"].includes(event)) {
+            if (["Dangerous Eye Close", "Fatigue", "Distraction"].includes(event)) {
               this.dropDownAlertRef.alertWithType('error', 'Event alert!', `Event "${event}" detected !!`);
               // play alarm sound
               const soundObject = new Audio.Sound();
@@ -202,6 +214,7 @@ export default class App extends React.Component {
           }
         })
       } else {
+        this.socket = null
         this.notificationRef.off("child_added")
       }
     }

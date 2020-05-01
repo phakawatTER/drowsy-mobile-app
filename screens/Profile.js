@@ -256,7 +256,7 @@ class Profile extends React.Component {
         <FlatList
           pagingEnabled={true}
           ref={this.listRef}
-          showsHorizontalScrollIndicator={false}
+          showsHorizontalScrollIndicator={true}
           onMomentumScrollEnd={this.onScrollEnd}
           horizontal
           data={slides}

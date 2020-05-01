@@ -13,7 +13,7 @@ const saloon_online = require("../assets/imgs/icon/saloon-online.png");
 const saloon_offline = require("../assets/imgs/icon/saloon-offline.png");
 const stop = require("../assets/imgs/icon/stop.png")
 const start = require("../assets/imgs/icon/start.png")
-const appLogo = require("../assets/imgs/app-logo.png")
+const appLogo = require("../assets/icon.png")
 
 
 const iconEvent = {

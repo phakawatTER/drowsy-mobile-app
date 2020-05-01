@@ -42,6 +42,8 @@ class Profile extends React.Component {
     constructor(props) {
         super(props)
         this.state = {
+            listIndex: 0,
+            pages: [],
             headerHeight: 0,
             isLoading: true,
             vdo_list: [],
@@ -82,6 +84,19 @@ class Profile extends React.Component {
         })
     }
 
+
+    arrangePage = (data) => {
+        let pageSize = 15
+        let count = 0
+        let pages = []
+        while (data.length > 0) {
+            page = data.slice(0, pageSize)
+            pages.push(page)
+            data = data.slice(page.length, data.length)
+        }
+        return pages
+    }
+
     getVDOList = () => {
         this.setState({ isLoading: true })
         let { uid } = this.props.screenProps.getUserInfo()
@@ -90,7 +105,9 @@ class Profile extends React.Component {
         }).then(response => {
             let { code, vdo } = response.data
             if (code === 200) {
+                let pages = this.arrangePage(vdo)
                 return this.setState({
+                    pages,
                     vdo_list: vdo,
                     isLoading: false,
                 })
@@ -157,10 +174,81 @@ class Profile extends React.Component {
         }
     }
 
+    onScrollEnd = (e) => {
+        let contentOffset = e.nativeEvent.contentOffset;
+        let viewSize = e.nativeEvent.layoutMeasurement;
+
+        // Divide the horizontal offset by the width of the view to see which page is visible
+        let pageNum = Math.floor(contentOffset.x / viewSize.width);
+        this.setState({
+            listIndex: pageNum
+        })
+    }
+
 
     render() {
-        let { vdo_list, isLoading } = this.state
+        let { vdo_list, isLoading, pages } = this.state
 
+        const renderItem = (items) => {
+            return (
+                <Block style={{ width: listWidth }}>
+                    {items.map(item => {
+                        return (
+                            <Animated.View
+                                style={{
+                                    marginLeft: 0,
+                                    paddingHorizontal: 0,
+                                    paddingVertical: 0,
+                                    borderRadius: 5,
+                                }}
+                            >
+                                <Block
+                                    left
+                                    space="evenly"
+                                    style={{
+                                        paddingVertical: 10,
+                                    }}
+                                >
+                                    <Block
+                                        left
+                                        row
+                                        space="evenly"
+                                        style={{ width: "100%" }}
+                                    >
+                                        <Block style={{ flexDirection: "row" }}>
+                                            <Text style={{ color: "#000" }}>
+                                                <Text bold>Trip Acctime</Text> {item.split(".")[0]}
+                                                {"\n"}
+                                                <Text bold>Datetime</Text> {moment.unix(item.split(".")[0]).format("DD-MM-YYYY HH:mm:ss")}
+                                            </Text>
+                                        </Block>
+
+                                        <Block space="evenly" middle>
+                                            <Button
+                                                onPress={() => this.selectVDO(item)}
+                                                small
+                                                style={{ backgroundColor: argonTheme.COLORS.SUCCESS, paddingHorizontal: 0, paddingVertical: 0 }}
+                                            >
+                                                <Text color={"white"} bold>
+                                                    <AntDesign
+                                                        name="videocamera"
+                                                        size={12}
+                                                        color="white"
+                                                    />
+                                                    {" "}
+                          View
+                        </Text>
+                                            </Button>
+                                        </Block>
+
+                                    </Block>
+                                </Block>
+                                <Block style={styles.divider} />
+                            </Animated.View>
+                        )
+                    })}</Block>)
+
+        }
         const renderTripVDOList = () => {
             if (vdo_list.length == 0 && !isLoading) {
                 return (
@@ -180,65 +268,27 @@ class Profile extends React.Component {
             } else {
 
                 return (
-                    <FlatList
-                        data={vdo_list}
-                        renderItem={({ item }) => {
-                            if (vdo_list.length == 0) return (<></>)
-                            return (
-                                <Animated.View
-                                    style={{
-                                        marginLeft: 0,
-                                        paddingHorizontal: 0,
-                                        paddingVertical: 0,
-                                        borderRadius: 5,
-                                    }}
-                                >
-                                    <Block
-                                        left
-                                        space="evenly"
-                                        style={{
-                                            paddingVertical: 10,
-                                        }}
-                                    >
-                                        <Block
-                                            left
-                                            row
-                                            space="evenly"
-                                            style={{ width: "100%" }}
-                                        >
-                                            <Block style={{ flexDirection: "row" }}>
-                                                <Text style={{ color: "#000" }}>
-                                                    <Text bold>Trip Acctime</Text> {item.split(".")[0]}
-                                                    {"\n"}
-                                                    <Text bold>Datetime</Text> {moment.unix(item.split(".")[0]).format("DD-MM-YYYY HH:mm:ss")}
-                                                </Text>
-                                            </Block>
+                    <>
+                        <FlatList
+                            pagingEnabled={true}
+                            showsHorizontalScrollIndicator={false}
+                            onMomentumScrollEnd={this.onScrollEnd}
+                            horizontal
+                            data={pages}
+                            renderItem={({ item }) => renderItem(item)}
+                        >
 
-                                            <Block space="evenly" middle>
-                                                <Button
-                                                    onPress={() => this.selectVDO(item)}
-                                                    small
-                                                    style={{ backgroundColor: argonTheme.COLORS.SUCCESS, paddingHorizontal: 0, paddingVertical: 0 }}
-                                                >
-                                                    <Text color={"white"} bold>
-                                                        <AntDesign
-                                                            name="videocamera"
-                                                            size={12}
-                                                            color="white"
-                                                        />
-                                                        {" "}
-                                      View
-                                    </Text>
-                                                </Button>
-                                            </Block>
-
-                                        </Block>
-                                    </Block>
-                                    <Block style={styles.divider} />
-                                </Animated.View>
-                            )
-                        }}
-                    />
+                        </FlatList>
+                        <Block middle style={{ flexDirection: "row", paddingTop: 25 }}>
+                            {
+                                pages.map((el, index) => {
+                                    return (
+                                        <View style={{ ...styles.pagination, ...index === this.state.listIndex ? styles.activeDotStyle : styles.dotStyle }}></View>
+                                    )
+                                })
+                            }
+                        </Block>
+                    </>
                 )
             }
         }
@@ -259,9 +309,13 @@ class Profile extends React.Component {
                         ...styles.profileCard
                     }}>
                         <Block flex>
-                            <Block>
+                            <Block
+                                onLayout={(event) => {
+                                    var { x, y, width, height } = event.nativeEvent.layout;
+                                    listWidth = width
+                                }}
+                            >
                                 <Text bold size={28} color="#32325D">Trip Video</Text>
-
                                 <Text size={20}>
                                     total{" "}<Text color={argonTheme.COLORS.WARNING}>
                                         {this.state.vdo_list.length}

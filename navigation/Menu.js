@@ -68,9 +68,9 @@ const Drawer = props => {
         <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
           <Block flex={0.05} style={styles.header} row>
             {/* <Logo /> */}
-            {/* <Image source={Images.appLogo} style={{ width: 27.5, height: 27.5 }} /> */}
-            <MaterialCommunityIcons name="truck-fast" size={27.5} />
-            <Text bold size={20}> Drowsy Detection App</Text>
+            <Image source={Images.appLogo} style={{ width: 27.5, height: 27.5 }} />
+            {/* <MaterialCommunityIcons name="truck-fast" size={27.5} /> */}
+            <Text bold size={20}> C o n f i D r i v e</Text>
           </Block>
           <DrawerItems {...props} />
           <Block flex row style={styles.defaultStyle}>

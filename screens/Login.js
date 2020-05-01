@@ -5,7 +5,8 @@ import {
     ImageBackground,
     Dimensions,
     StatusBar,
-    KeyboardAvoidingView
+    KeyboardAvoidingView,
+    Image, s
 } from "react-native";
 import { Block, Checkbox, Text, theme } from "galio-framework";
 import axios from "axios";
@@ -105,8 +106,10 @@ class Login extends React.Component {
                         <Block style={styles.registerContainer}>
                             <Block flex >
                                 <Block flex={0.15} middle style={styles.socialConnect}>
-                                    <Text color="#8898AA" h4>
-                                        Sign in
+                                    <Image source={Images.appLogo} style={{ width: 27.5, height: 27.5 }} />
+                                    <Text color="black" bold h4 style={{ letterSpacing: 5 }}>
+                                        {" "}
+                                        C o n f i D r i v e
                 </Text>
                                 </Block>
                                 <Block flex center>
@@ -175,11 +178,11 @@ class Login extends React.Component {
                                                     Sign up
                         </Text>
                                             </Button>
-                                            <Block row style={styles.passwordCheck}>
+                                            {/* <Block row style={styles.passwordCheck}>
                                                 <Text>
                                                     Forgot your password?
                         </Text>
-                                            </Block>
+                                            </Block> */}
                                         </Block>
 
                                     </KeyboardAvoidingView>
@@ -210,7 +213,9 @@ const styles = StyleSheet.create({
         elevation: 1,
         overflow: "hidden"
     },
+
     socialConnect: {
+        flexDirection: "row",
         fontWeight: "bold"
         // backgroundColor: argonTheme.COLORS.WHITE,
         // borderBottomWidth: StyleSheet.hairlineWidth,
